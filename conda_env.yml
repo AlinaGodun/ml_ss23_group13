@@ -12,3 +12,4 @@ dependencies:
     - ipykernel==6.21.3
     - missingno==0.5.2
     - nbconvert==7.2.10
+    - scikit-learn==1.2.1
