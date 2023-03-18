@@ -21,12 +21,12 @@ for c in df.columns:
     if is_object_dtype(data_types[c]):
         df[c] = df[c].str.decode('utf-8')
 
-df.to_csv(f'{path}autism_dataset.csv')
+df.to_csv(f'{path}autism_dataset.csv', index=False)
 
 # transform polish banks dataset to csv from arff
 path = r'D:\everything\Studium\SS2023\ml_ss23_group13\data\Polish_Banks\\'
 df = transform_arff_to_pd_df(path)
-df.to_csv(f'{path}polish_banks_dataset.csv')
+df.to_csv(f'{path}polish_banks_dataset.csv', index=False)
 
 # create dict with names for polish banks dataset
 f = open(f'{path}attr_names.txt', "r")
