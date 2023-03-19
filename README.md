@@ -16,7 +16,7 @@ conda activate ML
 - Transformed version of the [Polish companies bankruptcy data set](https://archive.ics.uci.edu/ml/datasets/Polish+companies+bankruptcy+data#). We are using the `3year.arff ` file.
 
 ## Jupyter notebooks
-- `Fertility_Dataset_Analysis.ipynb`:
+- `fertility_dataset_exploration.ipynb`:
   - Analysis of fertility dataset. Creates barplots that show the distribution of categorical variables. Creates histogram to show the distribution of numeric variables.
 - `bankruptcy_dataset_exploration.ipynb`:
   - Analyis of bankruptcy dataset. Creates histograms, kdeplots and scatterplots. Shows missing value distribution. Performs some basic outlier removal to make most plots easier to interpret and understand.
