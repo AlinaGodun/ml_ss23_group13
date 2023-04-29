@@ -3,6 +3,7 @@ from sklearn.preprocessing import (
     MinMaxScaler,
     MaxAbsScaler
 )
+import pandas as pd
 
 def normalize_features(df, cols, scaler_name='min-max', scaler=None, scaler_params={}):
     """
@@ -39,3 +40,37 @@ def normalize_features(df, cols, scaler_name='min-max', scaler=None, scaler_para
 
     df.loc[:, cols] = scaler.fit_transform(df[cols])
     return df, scaler
+
+
+def encode_label(df):
+    df = df.copy()
+    df = df.drop('season', axis=1).join(pd.get_dummies(df.season))
+    df['high_fever'].replace({'<3month': 2, '>3month': 1, 'no': 0}, inplace=True)
+    df['smoking'].replace({'never': 0, 'occasional': 1, 'daily': 2}, inplace=True)
+    df['alcohol_consumption'].replace({'several times/day': 4,
+                                    'daily': 3,
+                                    'several times/week': 2,
+                                    'once/week': 1,
+                                    'hardly ever/never': 0}, inplace=True)
+    return df
+
+
+def encode_one_hot(df):
+    df = df.copy()
+    one_hot_cols = ['season', 'high_fever', 'smoking', 'alcohol_consumption']
+
+    for ohc in one_hot_cols:
+        df = df.drop(ohc, axis=1).join(pd.get_dummies(df[ohc], prefix=ohc))
+    
+    return df
+
+
+def encode(df, encoding='label'):
+    available_encodings = ['label', 'one-hot']
+
+    if encoding == 'label':
+        return encode_label(df)
+    elif encoding == 'one-hot':
+        return encode_one_hot(df)
+    else:
+        raise KeyError(f'Wrong encoding param provided. Available options: {available_encodings}')
