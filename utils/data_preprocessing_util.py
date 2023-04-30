@@ -4,6 +4,9 @@ from sklearn.preprocessing import (
     MaxAbsScaler
 )
 import pandas as pd
+import numpy as np
+from scipy import stats
+
 
 def normalize_features(df, cols, scaler_name='min-max', scaler=None, scaler_params={}):
     """
@@ -74,3 +77,18 @@ def encode(df, encoding='label'):
         return encode_one_hot(df)
     else:
         raise KeyError(f'Wrong encoding param provided. Available options: {available_encodings}')
+
+
+def preprocess_breast_cancer_data(df, log_transform=False, outlier_removal=False):
+    df = df.copy()
+
+    if log_transform:
+        to_log = ['areaWorst', 'compactnessWorst', 'compactnessMean', 'concavityMean', 'concavePointsMean', 'concavityWorst', 'fractalDimensionsWorst']
+        for c in [c for c in df.columns if 'stderr' in c.lower() or c in to_log]:
+            # use log const for values with 0 values bc log(0) is -inf
+            log_const = 0.001
+            df[c] = np.log10(df[c] + log_const)
+
+    if outlier_removal:
+        df = df[(np.abs(stats.zscore(df.iloc[:, 2:])) < 3).all(axis=1)]
+    return df
