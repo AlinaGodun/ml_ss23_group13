@@ -1,7 +1,8 @@
 from sklearn import metrics, model_selection
 from sklearn.pipeline import Pipeline
 from sklearn.exceptions import ConvergenceWarning
-
+from imblearn.over_sampling import RandomOverSampler
+from imblearn.pipeline import Pipeline as ImbPipeline
 import warnings
 
 def eval(y_pred, y_test):
@@ -33,9 +34,9 @@ def eval(y_pred, y_test):
     return model
 
 
-def perform_gridsearch(X_train, y_train, X_test, y_test, pipe, params):
+def perform_gridsearch(X_train, y_train, X_test, y_test, pipe, params, cv=5):
     model = {}
-    gr_search = model_selection.GridSearchCV(pipe, param_grid=params, scoring='f1_macro', cv=5, verbose=0)
+    gr_search = model_selection.GridSearchCV(pipe, param_grid=params, scoring='f1_macro', cv=cv, verbose=0)
     gr_search.fit(X_train, y_train)
     best_params = gr_search.best_params_
     best_score = gr_search.best_score_
@@ -56,7 +57,7 @@ def perform_gridsearch(X_train, y_train, X_test, y_test, pipe, params):
     return model
 
 
-def define_pipelines(methods, scaler=None):
+def define_pipelines(methods, scaler=None, oversampling=False, random_seed=1038):
     pipelines = {}
     for method in methods:
         pipeline_steps = []
@@ -64,14 +65,22 @@ def define_pipelines(methods, scaler=None):
         if scaler:
             pipeline_steps.append(('scaler', scaler))
 
+        if oversampling:
+            pipeline_steps.append(('oversampler', RandomOverSampler(random_state=random_seed)))
+
         pipeline_steps.append(method)
-        pipeline = Pipeline(steps=pipeline_steps)
-        name, cl = method
+
+        if oversampling:
+            pipeline = ImbPipeline(steps=pipeline_steps)
+        else:
+            pipeline = Pipeline(steps=pipeline_steps)
+
+        name, _ = method
         pipelines[name] = pipeline
     return pipelines
 
 
-def compare_models(pipelines, params, X_train, y_train, X_test, y_test):
+def compare_models(pipelines, params, X_train, y_train, X_test, y_test, cv=5):
     models_cv = {}
     for model_name, pipeline in pipelines.items():
         print(model_name)
@@ -79,10 +88,10 @@ def compare_models(pipelines, params, X_train, y_train, X_test, y_test):
         # Disable MLP's convergence and runtime warnings to get a cleaner output for the hand-in;
         # During our experiments, we also considered whether MLP training convered in the given 1000 iterations
         # The analysis of this behaviour is mentioned in the report
-        # warnings.simplefilter("ignore", category=ConvergenceWarning)
-        # warnings.simplefilter("ignore", category=RuntimeWarning)
+        warnings.simplefilter("ignore", category=ConvergenceWarning)
+        warnings.simplefilter("ignore", category=RuntimeWarning)
 
-        models_cv[model_name] = perform_gridsearch(X_train, y_train, X_test, y_test, pipeline, params[model_name])
+        models_cv[model_name] = perform_gridsearch(X_train, y_train, X_test, y_test, pipeline, params[model_name], cv)
         print(f"Report line: {models_cv[model_name]['acc']:.3f} " +
                              f"{models_cv[model_name]['balanced_acc']:.3f} " +
                              f"{models_cv[model_name]['precision']:.3f} " +

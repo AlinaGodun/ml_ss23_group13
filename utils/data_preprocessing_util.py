@@ -92,3 +92,23 @@ def preprocess_breast_cancer_data(df, log_transform=False, outlier_removal=False
     if outlier_removal:
         df = df[(np.abs(stats.zscore(df.iloc[:, 2:])) < 3).all(axis=1)]
     return df
+
+
+def preprocess_fertility_dataset(df):
+    df['season'].replace({-1: 'winter', -0.33: 'spring', 0.33: 'summer', 1:'fall'}, inplace=True)
+    df['high_fever'].replace({-1: '<3month', 0: '>3month', 1: 'no'}, inplace=True)
+    df['smoking'].replace({-1: 'never', 0: 'occasional', 1: 'daily'}, inplace=True)
+    df['alcohol_consumption'].replace({
+        0.2: 'several times/day',
+        0.4: 'daily',
+        0.6: 'several times/week',
+        0.8: 'once/week',
+        1: 'hardly ever/never'
+    }, inplace=True)
+
+    df['age'] = df['age'] * (36 - 18) + 18
+    df['hours_sitting'] = df['hours_sitting'] * (16 - 0) + 0
+
+    df['diagnosis'].replace({'O': 1, 'N': 0}, inplace=True)
+
+    return df
