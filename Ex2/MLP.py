@@ -66,6 +66,7 @@ class MLP:
         for row_idx in range(X.shape[0]):
             y_pred = self.predict(X[row_idx, :].reshape(1, -1))
             print(f'y_pred: {y_pred}')
+            #TODO use probability for cross entropy!
             loss = self.cross_entropy(y[row_idx], y_pred, self.weights_, self.bias_)
             print(loss)
     
