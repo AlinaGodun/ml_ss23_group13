@@ -1,16 +1,15 @@
 from math import log
 from abc import ABC, abstractmethod
-import itertools
 import numpy as np
 import time
 from sklearn.utils import check_array, check_random_state, check_X_y
 from sklearn.utils.estimator_checks import check_estimator
 from sklearn.exceptions import NotFittedError
-from sklearn.metrics import accuracy_score, confusion_matrix
+from sklearn.metrics import accuracy_score, confusion_matrix, f1_score
 from sklearn.neural_network import MLPClassifier as skMLP
 from sklearn.model_selection import train_test_split
-from sklearn.model_selection import cross_val_score
 from tqdm import tqdm
+
 
 class ActivationFunction(ABC):
     """Abstract base class for activation functions in a neural network.
@@ -170,7 +169,7 @@ class MLP:
             raise ValueError(f'Invalid number of iterations provided: {self.n_iter}. ' +
                               'Number of iterations must be positive.')
 
-    def cross_entropy(self, y, y_pred, weights, bias):
+    def cross_entropy(self, y, y_pred):
         """Compute the cross-entropy loss.
 
         Args:
@@ -183,10 +182,10 @@ class MLP:
             float: The computed cross-entropy loss.
         """
         #TODO regularisation with weights + bias
-        loss = 0
+        loss = np.zeros(y.shape)
         for idx, class_label in zip(range(y_pred.shape[1]), self.classes_):
             y_prob = y_pred[:, idx]
-            loss -= (class_label == y)*log(y_prob)
+            loss -= (class_label == y)*np.log(y_prob)
         return loss
 
     def check_regression_task(self, y):
@@ -205,42 +204,65 @@ class MLP:
             raise ValueError(f'Unknown label type: Estimator only supports classification')
 
 
-    def fit(self, X, y):
+    def fit(self, X, y, patience = 10):
         """Fit the MLP classifier to the training data.
 
         Args:
             X (array-like): The training input samples.
             y (array-like): The target values.
-
+            patience (int): number of iterations without improvement after which training is stopped.
         Returns:
             self (object): Returns the instance itself.
         """
         if y is None:
             raise ValueError("MLP requires y to be passed, but the target y is None")
         X, y = check_X_y(X,y)
+
         self.check_regression_task(y)
         random_state = check_random_state(self.seed)
         self._is_fitted = True
-        self.classes_, y = np.unique(y, return_inverse=True)
-        self.n_features_in_ = X.shape[1]
+
+        X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.2, random_state=42)
+        self.classes_, y_train = np.unique(y_train, return_inverse=True)
+        self.n_features_in_ = X_train.shape[1]
 
         activation_function = self.afs[self.activation_function]()
+
+        loss = float('inf')
+        early_stopping_counter = 0
         
-        self.weights_, self.bias_ = self.initialize_weights(X, random_state, self.classes_.shape[0])
-        for iteration in range(self.n_iter):
-            for row_idx in range(X.shape[0]):
-                X_sample = X[row_idx, :].reshape(1, -1)
-                y_sample = y[row_idx]
+        self.weights_, self.bias_ = self.initialize_weights(X_train, random_state, self.classes_.shape[0])
+        for iteration in tqdm(range(self.n_iter)):
+            for row_idx in range(X_train.shape[0]):
+                X_sample = X_train[row_idx, :].reshape(1, -1)
+                y_sample = y_train[row_idx]
                 activation_values, z_values = self.feed_forward(X_sample, activation_function)
 
                 #TODO probably remove again
                 if np.isnan(activation_values[-1]).any():
                     print("ALARM, ALARM: divergence detected, use smaller learning rate you worthless piece of shit")
                     print("As punishment we return the models with randomly initialized weights")
-                    self.weights_, self.bias_ = self.initialize_weights(X, random_state, self.classes_.shape[0])
+                    self.weights_, self.bias_ = self.initialize_weights(X_train, random_state, self.classes_.shape[0])
                     return self
                 #TODO debug gradient shit
                 self.perform_backpropagation(activation_function, activation_values, z_values, y_sample, X_sample)
+
+            activation_values, _ = self.feed_forward(X_val, activation_function)
+            class_probabilities = activation_values[-1]
+            current_loss = self.cross_entropy(y_val, class_probabilities).mean()
+
+            if current_loss < loss:
+                print(f'Loss better: {current_loss = }')
+                early_stopping_counter = 0
+            else: 
+                print(f'Loss worse: {current_loss = }')
+                early_stopping_counter += 1
+
+            if early_stopping_counter == patience:
+                print(f'Loss did not go down for 10 iterations. Stopping training at iteration {iteration}...')
+                break
+            current_loss = loss
+        
         return self
 
     def perform_backpropagation(self, activation_function, activation_values, z_values, y, X):
@@ -392,15 +414,15 @@ class MLP:
 
 if __name__ == "__main__":
 
-    perform_gridsearch = True
+    perform_gridsearch = False
 
     start = time.time()
-    X_main = np.random.random_sample((10000, 10))
+    X_main = np.random.random_sample((1000, 10))
     sum_X = X_main.sum(axis=1).astype(int)
     y_main = np.clip(sum_X - np.amin(sum_X), 0, 4)
     X_train, X_test, y_train, y_test = train_test_split(X_main, y_main)
 
-    mlp = MLP( learning_rate=0.1)
+    mlp = MLP(learning_rate=0.001, n_iter=10000)
     mlp.fit(X_main, y_main)
 
     exit()
