@@ -1,5 +1,6 @@
 from math import log
 import numpy as np
+import time
 from sklearn.utils import check_array, check_random_state, check_X_y
 from sklearn.utils.estimator_checks import check_estimator
 from sklearn.exceptions import NotFittedError
@@ -24,19 +25,13 @@ class ReluActivation(ActivationFunction):
     def derivative(self, X):
         return (X > 0).astype(int)
 
-class OtherActivation(ActivationFunction):
+class Sigmoid(ActivationFunction):
     def function(self, X):
-       pass
+        return 1 / (1+np.exp(-X))
     
     def derivative(self, X):
-        # TODO implement
-        pass
-    
-def relu(X):
-        return np.maximum(0, X)
-
-def second_activation_func(X):
-    pass
+        sigmoid = self.function(X)
+        return sigmoid * (1 - sigmoid)
 
 def softmax(X):
     return (np.exp(X)/np.sum(np.exp(X), axis=1)[:, None])
@@ -44,7 +39,7 @@ def softmax(X):
 class MLP:
     afs = {
         'relu': ReluActivation,
-        'second_activation_func': OtherActivation}
+        'sigmoid': Sigmoid}
     
     _estimator_type = "classifier"
     _is_fitted = False
@@ -64,11 +59,11 @@ class MLP:
             raise KeyError(f'Invalid activation function provided: {self.activation_function}. ' +
                            f'Available activation functions: {self.afs}')
         if learning_rate < 0.0:
-            raise ValueError(f'Invalid learning rate provided: {self.activation_function}. ' +
+            raise ValueError(f'Invalid learning rate provided: {self.learning_rate}. ' +
                               'Learning rate must be positive.')
         
         if n_iter < 0:
-            raise ValueError(f'Invalid number of iterations provided: {self.activation_function}. ' +
+            raise ValueError(f'Invalid number of iterations provided: {self.n_iter}. ' +
                               'Number of iterations must be positive.')
 
     def cross_entropy(self, y, y_pred, weights, bias):
@@ -198,7 +193,8 @@ class MLP:
     
 
 if __name__ == "__main__":
-    mlp = MLP((15, 10), n_iter=200, learning_rate=0.0001)
+    start = time.time()
+    mlp = MLP((15, 15,10), n_iter=300, learning_rate=0.001, activation_function='sigmoid')
     X_main = np.random.random_sample((10000, 10))
     y_main = X_main.sum(axis=1).astype(int)
     #print(y_main)
@@ -208,11 +204,25 @@ if __name__ == "__main__":
     print(accuracy_score(y_test, y_pred))
     print(confusion_matrix(y_test, y_pred))
     
+    print(time.time()-start)
+    start = time.time()
+
+    mlp = MLP((15, 10), n_iter=200, learning_rate=0.0001, activation_function='relu')
+    mlp.fit(X_train, y_train)
+    y_pred = mlp.predict(X_test)
+    print(accuracy_score(y_test, y_pred))
+    print(confusion_matrix(y_test, y_pred))
+
+    print(time.time()-start)
+    start = time.time()
+
     skmlp = skMLP((15, 10), solver='sgd', alpha=0.0001, max_iter=200)
     skmlp.fit(X_train, y_train)
     y_pred = skmlp.predict(X_test)
     print(accuracy_score(y_test, y_pred))
     print(confusion_matrix(y_test, y_pred))
+
+    print(time.time()-start)
     # print(y_main)
     # print(y_pred)
     #check_estimator(mlp)
