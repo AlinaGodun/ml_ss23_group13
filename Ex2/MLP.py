@@ -388,62 +388,6 @@ class MLP:
             dict: Additional tags for the MLP classifier.
         """
         return {"requires_y": True, "poor_score": True}
-    
-def cartesian_product_dict(**kwargs):
-    """Generate a Cartesian product of parameter combinations.
-
-    Args:
-        kwargs: Dictionary of parameters and their possible values.
-
-    Yields:
-        dict: Dictionary representing a parameter combination.
-    """
-    param_names = kwargs.keys()
-    for parameter_values in itertools.product(*kwargs.values()):
-        yield dict(zip(param_names, parameter_values))
-
-def gridSearchIteration(parameters, X, y):
-    """Perform a grid search iteration.
-
-    Args:
-        parameters (dict): Parameters for the MLP classifier.
-        X (array-like): Input features.
-        y (array-like): Target labels.
-
-    Returns:
-        float: Mean F1 score from cross-validation.
-    """
-    mlp = MLP()
-    mlp.set_params(**parameters)
-    scores = cross_val_score(mlp, X, y, cv=5, scoring='f1_macro', n_jobs=-1)
-    return scores.mean()
-
-def gridSearchCV(X, y, param_grid, n_workers = 4):
-    """Perform a grid search for hyperparameter tuning.
-
-    Args:
-        X (array-like): Input features.
-        y (array-like): Target labels.
-        param_grid (dict): Grid of hyperparameters to search.
-        n_workers (int): Number of parallel workers to use (default: 4).
-
-    Returns:
-        MLP: Fitted MLP classifier with the best parameters found.
-    """
-    param_combinations = list(cartesian_product_dict(**param_grid))
-    max_score = -1
-    for params in tqdm(param_combinations):
-        score = gridSearchIteration(params, X, y)
-        if score > max_score:
-            max_score = score
-            best_params = params
-    print(f"Best params found: {best_params}")
-
-    mlp = MLP()
-    mlp.set_params(**best_params)
-    mlp.fit(X_train, y_train)
-    return mlp
-
 
 
 if __name__ == "__main__":

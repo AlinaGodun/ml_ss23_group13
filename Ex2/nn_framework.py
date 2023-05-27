@@ -1,6 +1,9 @@
 from MLP import MLP 
 from sklearn.preprocessing import OneHotEncoder
 import pandas as pd
+import itertools
+from sklearn.model_selection import cross_val_score
+import tqdm
 
 class NNFramework:
     def __init__(self):
@@ -57,7 +60,57 @@ class NNFramework:
         return df_encoded
     
 
-    def find_optimal_params(self, model):
-        raise NotImplemented
-        return model
+    def cartesian_product_dict(self, **kwargs):
+        """Generate a Cartesian product of parameter combinations.
+
+        Args:
+            kwargs: Dictionary of parameters and their possible values.
+
+        Yields:
+            dict: Dictionary representing a parameter combination.
+        """
+        param_names = kwargs.keys()
+        for parameter_values in itertools.product(*kwargs.values()):
+            yield dict(zip(param_names, parameter_values))
+
+    def gridSearchIteration(self, parameters, X, y):
+        """Perform a grid search iteration.
+
+        Args:
+            parameters (dict): Parameters for the MLP classifier.
+            X (array-like): Input features.
+            y (array-like): Target labels.
+
+        Returns:
+            float: Mean F1 score from cross-validation.
+        """
+        mlp = MLP()
+        mlp.set_params(**parameters)
+        scores = cross_val_score(mlp, X, y, cv=5, scoring='f1_macro', n_jobs=-1)
+        return scores.mean()
+
+    def gridSearchCV(self, X, y, param_grid):
+        """Perform a grid search for hyperparameter tuning.
+
+        Args:
+            X (array-like): Input features.
+            y (array-like): Target labels.
+            param_grid (dict): Grid of hyperparameters to search.
+
+        Returns:
+            MLP: Fitted MLP classifier with the best parameters found.
+        """
+        param_combinations = list(self.cartesian_product_dict(**param_grid))
+        max_score = -1
+        for params in tqdm(param_combinations):
+            score = self.gridSearchIteration(params, X, y)
+            if score > max_score:
+                max_score = score
+                best_params = params
+        print(f"Best params found: {best_params}")
+
+        mlp = MLP()
+        mlp.set_params(**best_params)
+        mlp.fit(X, y)
+        return mlp
     
