@@ -13,34 +13,114 @@ from sklearn.model_selection import cross_val_score
 from tqdm import tqdm
 
 class ActivationFunction(ABC):
+    """Abstract base class for activation functions in a neural network.
+    
+    Subclasses of ActivationFunction must implement the function and derivative methods.
+    """
     @abstractmethod
     def function(self, X):
+        """Compute the activation function.
+        
+        Args:
+            X (array-like): The input values.
+            
+        Returns:
+            array-like: The computed activation values.
+        """
         return NotImplemented
     
     @abstractmethod
     def derivative(self, X):
+        """Compute the derivative of the activation function.
+        
+        Args:
+            X (array-like): The input values.
+            
+        Returns:
+            array-like: The computed derivative values.
+        """
         return NotImplemented
     
 class ReluActivation(ActivationFunction):
+    """Rectified Linear Unit (ReLU) activation function.
+    
+    The ReLU activation function returns the maximum of zero and the input value.
+    """
     def function(self, X):
+        """Compute the ReLU activation function.
+        
+        Args:
+            X (array-like): The input values.
+            
+        Returns:
+            array-like: The computed ReLU activation values.
+        """
         return np.maximum(0, X)
     
     def derivative(self, X):
+        """Compute the derivative of the ReLU activation function.
+        
+        Args:
+            X (array-like): The input values.
+            
+        Returns:
+            array-like: The computed derivative values.
+        """
         return (X > 0).astype(int)
 
 class Sigmoid(ActivationFunction):
+    """Sigmoid activation function.
+    
+    The sigmoid activation function computes the sigmoid (logistic) function.
+    """
     def function(self, X):
+        """Compute the sigmoid activation function.
+        
+        Args:
+            X (array-like): The input values.
+            
+        Returns:
+            array-like: The computed sigmoid activation values.
+        """
         return 1 / (1+np.exp(-X))
     
     def derivative(self, X):
+        """Compute the derivative of the sigmoid activation function.
+        
+        Args:
+            X (array-like): The input values.
+            
+        Returns:
+            array-like: The computed derivative values.
+        """
         sigmoid = self.function(X)
         return sigmoid * (1 - sigmoid)
 
 def softmax(X):
-    X = X - np.amax(X)
+    """Compute the softmax function for a matrix of input values.
+    
+    Args:
+        X (array-like): The input values.
+        
+    Returns:
+        array-like: The computed softmax values.
+    """
     return (np.exp(X)/np.sum(np.exp(X), axis=1)[:, None])
 
 class MLP:
+    """Multi-Layer Perceptron (MLP) classifier.
+
+    MLP is a feedforward artificial neural network model that consists of multiple layers of nodes.
+    This implementation supports classification tasks using various activation functions.
+
+    Parameters:
+        hidden_layer_sizes (tuple): The number of nodes in each hidden layer. Default is (100,).
+        activation_function (str): The activation function to use in the hidden layers. Options: 'relu', 'sigmoid'.
+            Default is 'relu'.
+        learning_rate (float): The learning rate for gradient descent optimization. Default is 0.01.
+        n_iter (int): The number of iterations for training the model. Default is 100.
+        seed (int): The random seed for weight initialization. Default is 1111.
+    """
     afs = {
         'relu': ReluActivation,
         'sigmoid': Sigmoid}
@@ -49,6 +129,15 @@ class MLP:
     _is_fitted = False
  
     def __init__(self, hidden_layer_sizes=(100,), activation_function='relu', learning_rate=0.01, n_iter=100, seed=1111):
+        """Initialize the MLP classifier with the specified parameters.
+
+        Args:
+            hidden_layer_sizes (tuple): The number of nodes in each hidden layer.
+            activation_function (str): The activation function to use in the hidden layers.
+            learning_rate (float): The learning rate for gradient descent optimization.
+            n_iter (int): The number of iterations for training the model.
+            seed (int): The random seed for weight initialization.
+        """
         self.check_params(activation_function, learning_rate, n_iter)
         
         self.hidden_layer_sizes = hidden_layer_sizes
@@ -59,6 +148,17 @@ class MLP:
 
 
     def check_params(self, activation_function, learning_rate, n_iter):
+        """Check if the provided parameters are valid.
+
+        Args:
+            activation_function (str): The activation function to use in the hidden layers.
+            learning_rate (float): The learning rate for gradient descent optimization.
+            n_iter (int): The number of iterations for training the model.
+
+        Raises:
+            KeyError: If the activation function is not valid.
+            ValueError: If the learning rate or number of iterations is not positive.
+        """
         if activation_function not in self.afs:
             raise KeyError(f'Invalid activation function provided: {self.activation_function}. ' +
                            f'Available activation functions: {self.afs}')
@@ -71,6 +171,17 @@ class MLP:
                               'Number of iterations must be positive.')
 
     def cross_entropy(self, y, y_pred, weights, bias):
+        """Compute the cross-entropy loss.
+
+        Args:
+            y (array-like): The true labels.
+            y_pred (array-like): The predicted probabilities.
+            weights (list): The weight matrices of the neural network.
+            bias (list): The bias vectors of the neural network.
+
+        Returns:
+            float: The computed cross-entropy loss.
+        """
         #TODO regularisation with weights + bias
         loss = 0
         for idx, class_label in zip(range(y_pred.shape[1]), self.classes_):
@@ -79,12 +190,31 @@ class MLP:
         return loss
 
     def check_regression_task(self, y):
+        """Check if the target variable indicates a regression task.
+
+        If the target variable is a float indicating a regression task, raise a ValueError.
+
+        Args:
+            y (array-like): The target variable.
+
+        Raises:
+            ValueError: If the target variable indicates a regression task.
+        """
         if np.issubdtype(y.dtype, np.floating) and np.unique(y).shape[0] > 2:
             # The target variable is a float indicating a regression task
             raise ValueError(f'Unknown label type: Estimator only supports classification')
 
 
     def fit(self, X, y):
+        """Fit the MLP classifier to the training data.
+
+        Args:
+            X (array-like): The training input samples.
+            y (array-like): The target values.
+
+        Returns:
+            self (object): Returns the instance itself.
+        """
         if y is None:
             raise ValueError("MLP requires y to be passed, but the target y is None")
         X, y = check_X_y(X,y)
@@ -102,16 +232,27 @@ class MLP:
                 X_sample = X[row_idx, :].reshape(1, -1)
                 y_sample = y[row_idx]
                 activation_values, z_values = self.feed_forward(X_sample, activation_function)
+
                 #TODO probably remove again
                 if np.isnan(activation_values[-1]).any():
-                    self.learning_rate = self.learning_rate/10
+                    print("ALARM, ALARM: divergence detected, use smaller learning rate you worthless piece of shit")
+                    print("As punishment we return the models with randomly initialized weights")
                     self.weights_, self.bias_ = self.initialize_weights(X, random_state, self.classes_.shape[0])
-                    continue
+                    return self
                 #TODO debug gradient shit
                 self.perform_backpropagation(activation_function, activation_values, z_values, y_sample, X_sample)
         return self
 
     def perform_backpropagation(self, activation_function, activation_values, z_values, y, X):
+        """Perform the backpropagation algorithm to update weights and biases.
+
+        Args:
+            activation_function (object): The activation function object.
+            activation_values (list): The activation values for each layer.
+            z_values (list): The z values for each layer.
+            y (int): The target label.
+            X (array-like): The input sample.
+        """
         for layer_idx in range(len(activation_values)-1, -1, -1):
             if layer_idx == len(activation_values)-1:
                 y_indicator = np.zeros((self.classes_.shape[0]))
@@ -133,6 +274,16 @@ class MLP:
 
     
     def initialize_weights(self, X, random_state, num_classes):
+        """Initialize the weights and biases of the neural network.
+
+        Args:
+            X (array-like): The input samples.
+            random_state (object): The random state object.
+            num_classes (int): The number of classes in the target variable.
+
+        Returns:
+            tuple: The initialized weight matrices and bias vectors.
+        """
         weights = []
         bias = []
         input_dim = X.shape[1]
@@ -151,6 +302,14 @@ class MLP:
 
 
     def predict(self, X):
+        """Predict class labels for the input samples.
+
+        Args:
+            X (array-like): The input samples.
+
+        Returns:
+            array-like: The predicted class labels.
+        """
         if not self._is_fitted:
             raise NotFittedError("Tried to call predict on model that was not fitted.")
         X = check_array(X)
@@ -164,6 +323,15 @@ class MLP:
     
 
     def feed_forward(self, X, activation_function):
+        """Perform the feedforward algorithm.
+
+        Args:
+            X (array-like): The input samples.
+            activation_function (object): The activation function object.
+
+        Returns:
+            tuple: The activation values and z values for each layer.
+        """
         #TODO maybe implement dropout for regularisation?
         activation_values = []
         z_values = []
@@ -179,6 +347,14 @@ class MLP:
         return activation_values, z_values
 
     def get_params(self, deep=False):
+        """Get the parameters of the MLP classifier.
+
+        Args:
+            deep (bool): Whether to recursively retrieve the parameters.
+
+        Returns:
+            dict: The parameters of the MLP classifier.
+        """
         return {"hidden_layer_sizes": self.hidden_layer_sizes,
                 "activation_function": self.activation_function,
                 "learning_rate": self.learning_rate,
@@ -186,6 +362,17 @@ class MLP:
                 "seed": self.seed}
 
     def set_params(self, **parameters):
+        """Set the parameters of the MLP classifier.
+
+        Args:
+            **parameters: The parameters to be set.
+
+        Raises:
+            AttributeError: If an invalid parameter is provided.
+
+        Returns:
+            self (object): Returns the instance itself.
+        """
         for parameter, value in parameters.items():
             if not hasattr(self, parameter):
                 raise AttributeError(f"Class MLP has no attribute '{parameter}'")
@@ -195,20 +382,54 @@ class MLP:
 
 
     def _more_tags(self):
+        """Provide additional tags for the MLP classifier.
+
+        Returns:
+            dict: Additional tags for the MLP classifier.
+        """
         return {"requires_y": True, "poor_score": True}
     
 def cartesian_product_dict(**kwargs):
+    """Generate a Cartesian product of parameter combinations.
+
+    Args:
+        kwargs: Dictionary of parameters and their possible values.
+
+    Yields:
+        dict: Dictionary representing a parameter combination.
+    """
     param_names = kwargs.keys()
     for parameter_values in itertools.product(*kwargs.values()):
         yield dict(zip(param_names, parameter_values))
 
 def gridSearchIteration(parameters, X, y):
+    """Perform a grid search iteration.
+
+    Args:
+        parameters (dict): Parameters for the MLP classifier.
+        X (array-like): Input features.
+        y (array-like): Target labels.
+
+    Returns:
+        float: Mean F1 score from cross-validation.
+    """
     mlp = MLP()
     mlp.set_params(**parameters)
     scores = cross_val_score(mlp, X, y, cv=5, scoring='f1_macro', n_jobs=-1)
     return scores.mean()
 
 def gridSearchCV(X, y, param_grid, n_workers = 4):
+    """Perform a grid search for hyperparameter tuning.
+
+    Args:
+        X (array-like): Input features.
+        y (array-like): Target labels.
+        param_grid (dict): Grid of hyperparameters to search.
+        n_workers (int): Number of parallel workers to use (default: 4).
+
+    Returns:
+        MLP: Fitted MLP classifier with the best parameters found.
+    """
     param_combinations = list(cartesian_product_dict(**param_grid))
     max_score = -1
     for params in tqdm(param_combinations):
@@ -234,6 +455,11 @@ if __name__ == "__main__":
     sum_X = X_main.sum(axis=1).astype(int)
     y_main = np.clip(sum_X - np.amin(sum_X), 0, 4)
     X_train, X_test, y_train, y_test = train_test_split(X_main, y_main)
+
+    mlp = MLP( learning_rate=0.1)
+    mlp.fit(X_main, y_main)
+
+    exit()
 
     if perform_gridsearch:
         params = {"n_iter": [100, 200, 300],
