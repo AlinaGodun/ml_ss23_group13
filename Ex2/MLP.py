@@ -2,6 +2,7 @@ from math import log
 from abc import ABC, abstractmethod
 import itertools
 import numpy as np
+import time
 from sklearn.utils import check_array, check_random_state, check_X_y
 from sklearn.utils.estimator_checks import check_estimator
 from sklearn.exceptions import NotFittedError
@@ -27,19 +28,13 @@ class ReluActivation(ActivationFunction):
     def derivative(self, X):
         return (X > 0).astype(int)
 
-class OtherActivation(ActivationFunction):
+class Sigmoid(ActivationFunction):
     def function(self, X):
-       pass
+        return 1 / (1+np.exp(-X))
     
     def derivative(self, X):
-        # TODO implement
-        pass
-    
-def relu(X):
-        return np.maximum(0, X)
-
-def second_activation_func(X):
-    pass
+        sigmoid = self.function(X)
+        return sigmoid * (1 - sigmoid)
 
 def softmax(X):
     X = X - np.amax(X)
@@ -48,7 +43,7 @@ def softmax(X):
 class MLP:
     afs = {
         'relu': ReluActivation,
-        'second_activation_func': OtherActivation}
+        'sigmoid': Sigmoid}
     
     _estimator_type = "classifier"
     _is_fitted = False
@@ -68,11 +63,11 @@ class MLP:
             raise KeyError(f'Invalid activation function provided: {self.activation_function}. ' +
                            f'Available activation functions: {self.afs}')
         if learning_rate < 0.0:
-            raise ValueError(f'Invalid learning rate provided: {self.activation_function}. ' +
+            raise ValueError(f'Invalid learning rate provided: {self.learning_rate}. ' +
                               'Learning rate must be positive.')
         
         if n_iter < 0:
-            raise ValueError(f'Invalid number of iterations provided: {self.activation_function}. ' +
+            raise ValueError(f'Invalid number of iterations provided: {self.n_iter}. ' +
                               'Number of iterations must be positive.')
 
     def cross_entropy(self, y, y_pred, weights, bias):
@@ -234,6 +229,7 @@ if __name__ == "__main__":
 
     perform_gridsearch = True
 
+    start = time.time()
     X_main = np.random.random_sample((10000, 10))
     sum_X = X_main.sum(axis=1).astype(int)
     y_main = np.clip(sum_X - np.amin(sum_X), 0, 4)
@@ -245,9 +241,9 @@ if __name__ == "__main__":
                 "hidden_layer_sizes": [[15, 10], [30, 20], [50, 30, 10]],
                 "activation_function": ['relu']}
         params = {"n_iter": [100],
-                "learning_rate": [0.001],
-                "hidden_layer_sizes": [[15, 10], [5, 10]],
-                "activation_function": ['relu']}
+                "learning_rate": [0.001, 0.0001],
+                "hidden_layer_sizes": [[5, 10]],
+                "activation_function": ['relu', 'sigmoid']}
         best_model = gridSearchCV(X_train, y_train, params)
         y_pred = best_model.predict(X_test)
         print(accuracy_score(y_test, y_pred))
@@ -266,5 +262,5 @@ if __name__ == "__main__":
         print(accuracy_score(y_test, y_pred))
         print(confusion_matrix(y_test, y_pred))
 
-    #check_estimator(mlp)
+    print(time.time()-start)
     
