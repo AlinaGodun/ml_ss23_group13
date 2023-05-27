@@ -222,7 +222,7 @@ class MLP:
         random_state = check_random_state(self.seed)
         self._is_fitted = True
 
-        X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.2, random_state=42)
+        X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.2, stratify=y, random_state=random_state)
         self.classes_, y_train = np.unique(y_train, return_inverse=True)
         self.n_features_in_ = X_train.shape[1]
 
