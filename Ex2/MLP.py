@@ -1,4 +1,6 @@
 from math import log
+from abc import ABC, abstractmethod
+import itertools
 import numpy as np
 from sklearn.utils import check_array, check_random_state, check_X_y
 from sklearn.utils.estimator_checks import check_estimator
@@ -6,7 +8,8 @@ from sklearn.exceptions import NotFittedError
 from sklearn.metrics import accuracy_score, confusion_matrix
 from sklearn.neural_network import MLPClassifier as skMLP
 from sklearn.model_selection import train_test_split
-from abc import ABC, abstractmethod
+from sklearn.model_selection import cross_val_score
+from tqdm import tqdm
 
 class ActivationFunction(ABC):
     @abstractmethod
@@ -39,6 +42,7 @@ def second_activation_func(X):
     pass
 
 def softmax(X):
+    X = X - np.amax(X)
     return (np.exp(X)/np.sum(np.exp(X), axis=1)[:, None])
 
 class MLP:
@@ -98,17 +102,18 @@ class MLP:
         activation_function = self.afs[self.activation_function]()
         
         self.weights_, self.bias_ = self.initialize_weights(X, random_state, self.classes_.shape[0])
-        i=0
         for iteration in range(self.n_iter):
             for row_idx in range(X.shape[0]):
                 X_sample = X[row_idx, :].reshape(1, -1)
                 y_sample = y[row_idx]
                 activation_values, z_values = self.feed_forward(X_sample, activation_function)
+                #TODO probably remove again
+                if np.isnan(activation_values[-1]).any():
+                    self.learning_rate = self.learning_rate/10
+                    self.weights_, self.bias_ = self.initialize_weights(X, random_state, self.classes_.shape[0])
+                    continue
                 #TODO debug gradient shit
                 self.perform_backpropagation(activation_function, activation_values, z_values, y_sample, X_sample)
-            if i%5 == 0:
-                print(i)
-            i+=1
         return self
 
     def perform_backpropagation(self, activation_function, activation_values, z_values, y, X):
@@ -185,9 +190,10 @@ class MLP:
                 "n_iter": self.n_iter,
                 "seed": self.seed}
 
-
     def set_params(self, **parameters):
         for parameter, value in parameters.items():
+            if not hasattr(self, parameter):
+                raise AttributeError(f"Class MLP has no attribute '{parameter}'")
             setattr(self, parameter, value)
         #self.check_params()
         return self
@@ -196,24 +202,69 @@ class MLP:
     def _more_tags(self):
         return {"requires_y": True, "poor_score": True}
     
+def cartesian_product_dict(**kwargs):
+    param_names = kwargs.keys()
+    for parameter_values in itertools.product(*kwargs.values()):
+        yield dict(zip(param_names, parameter_values))
+
+def gridSearchIteration(parameters, X, y):
+    mlp = MLP()
+    mlp.set_params(**parameters)
+    scores = cross_val_score(mlp, X, y, cv=5, scoring='f1_macro', n_jobs=-1)
+    return scores.mean()
+
+def gridSearchCV(X, y, param_grid, n_workers = 4):
+    param_combinations = list(cartesian_product_dict(**param_grid))
+    max_score = -1
+    for params in tqdm(param_combinations):
+        score = gridSearchIteration(params, X, y)
+        if score > max_score:
+            max_score = score
+            best_params = params
+    print(f"Best params found: {best_params}")
+
+    mlp = MLP()
+    mlp.set_params(**best_params)
+    mlp.fit(X_train, y_train)
+    return mlp
+
+
 
 if __name__ == "__main__":
-    mlp = MLP((15, 10), n_iter=200, learning_rate=0.0001)
+
+    perform_gridsearch = True
+
     X_main = np.random.random_sample((10000, 10))
-    y_main = X_main.sum(axis=1).astype(int)
-    #print(y_main)
+    sum_X = X_main.sum(axis=1).astype(int)
+    y_main = np.clip(sum_X - np.amin(sum_X), 0, 4)
     X_train, X_test, y_train, y_test = train_test_split(X_main, y_main)
-    mlp.fit(X_train, y_train)
-    y_pred = mlp.predict(X_test)
-    print(accuracy_score(y_test, y_pred))
-    print(confusion_matrix(y_test, y_pred))
-    
-    skmlp = skMLP((15, 10), solver='sgd', alpha=0.0001, max_iter=200)
-    skmlp.fit(X_train, y_train)
-    y_pred = skmlp.predict(X_test)
-    print(accuracy_score(y_test, y_pred))
-    print(confusion_matrix(y_test, y_pred))
-    # print(y_main)
-    # print(y_pred)
+
+    if perform_gridsearch:
+        params = {"n_iter": [100, 200, 300],
+                "learning_rate": [0.01, 0.001, 0.0001],
+                "hidden_layer_sizes": [[15, 10], [30, 20], [50, 30, 10]],
+                "activation_function": ['relu']}
+        params = {"n_iter": [100],
+                "learning_rate": [0.001],
+                "hidden_layer_sizes": [[15, 10], [5, 10]],
+                "activation_function": ['relu']}
+        best_model = gridSearchCV(X_train, y_train, params)
+        y_pred = best_model.predict(X_test)
+        print(accuracy_score(y_test, y_pred))
+        print(confusion_matrix(y_test, y_pred))
+
+    else:
+        mlp = MLP((15, 10), n_iter=200, learning_rate=0.01)
+        mlp.fit(X_train, y_train)
+        y_pred = mlp.predict(X_test)
+        print(accuracy_score(y_test, y_pred))
+        print(confusion_matrix(y_test, y_pred))
+        
+        skmlp = skMLP((15, 10), solver='sgd', alpha=0.0001, max_iter=200)
+        skmlp.fit(X_train, y_train)
+        y_pred = skmlp.predict(X_test)
+        print(accuracy_score(y_test, y_pred))
+        print(confusion_matrix(y_test, y_pred))
+
     #check_estimator(mlp)
     
