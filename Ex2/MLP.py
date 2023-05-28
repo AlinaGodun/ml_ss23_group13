@@ -263,12 +263,12 @@ class MLP:
             current_loss = self.cross_entropy(y_val, class_probabilities).mean()
             self.validation_losses_.append(current_loss)
 
-            delta = current_loss*0.01
+            delta = 0.005
 
             if current_loss - min_loss <= -delta:
                 min_loss = current_loss
                 early_stopping_counter = 0
-                
+
             else:
                 # print(f'Loss worse: {current_loss = }')
                 early_stopping_counter += 1
@@ -276,9 +276,6 @@ class MLP:
             if early_stopping_counter == patience:
                 print(f'Loss did not go down for {patience} iterations. Stopping training at iteration {iteration}...')
                 break
-            
-
-            
 
         self.converged_ = True
         
@@ -309,7 +306,7 @@ class MLP:
                 gradient = X.T @ delta
             else:
                 gradient = activation_values[layer_idx-1].T @ delta
-            print(f'{gradient = }')
+            # print(f'{gradient = }')
             self.weights_[layer_idx] -= self.learning_rate * gradient
             self.bias_[layer_idx] -= self.learning_rate * delta.T
             prev_delta = delta
