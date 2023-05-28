@@ -185,6 +185,8 @@ class MLP:
         loss = np.zeros(y.shape)
         for idx, class_label in zip(range(y_pred.shape[1]), self.classes_):
             y_prob = y_pred[:, idx]
+            print(f"{class_label = }")
+            print(f"{y = }")
             loss -= (class_label == y)*np.log(y_prob)
         return loss
 
@@ -224,9 +226,9 @@ class MLP:
         self.converged_ = False
         self.validation_losses_ = []
         self.training_losses_ = []
-
+        self.classes_, y = np.unique(y, return_inverse=True)
         X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.2, stratify=y, random_state=random_state)
-        self.classes_, y_train = np.unique(y_train, return_inverse=True)
+
         self.n_features_in_ = X_train.shape[1]
 
         activation_function = self.afs[self.activation_function]()
