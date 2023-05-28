@@ -185,9 +185,7 @@ class MLP:
         loss = np.zeros(y.shape)
         for idx, class_label in zip(range(y_pred.shape[1]), self.classes_):
             y_prob = y_pred[:, idx]
-            print(f"{class_label = }")
-            print(f"{y = }")
-            loss -= (class_label == y)*np.log(y_prob)
+            loss -= (idx == y)*np.log(y_prob)
         return loss
 
     def check_regression_task(self, y):
