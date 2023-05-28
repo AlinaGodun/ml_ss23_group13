@@ -221,6 +221,9 @@ class MLP:
         self.check_regression_task(y)
         random_state = check_random_state(self.seed)
         self._is_fitted = True
+        self.converged_ = False
+        self.validation_losses_ = []
+        self.training_losses_ = []
 
         X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.2, stratify=y, random_state=random_state)
         self.classes_, y_train = np.unique(y_train, return_inverse=True)
@@ -232,7 +235,7 @@ class MLP:
         early_stopping_counter = 0
         
         self.weights_, self.bias_ = self.initialize_weights(X_train, random_state, self.classes_.shape[0])
-        for iteration in tqdm(range(self.n_iter)):
+        for iteration in range(self.n_iter):
             for row_idx in range(X_train.shape[0]):
                 X_sample = X_train[row_idx, :].reshape(1, -1)
                 y_sample = y_train[row_idx]
@@ -240,28 +243,40 @@ class MLP:
 
                 #TODO probably remove again
                 if np.isnan(activation_values[-1]).any():
-                    print("ALARM, ALARM: divergence detected, use smaller learning rate you worthless piece of shit")
-                    print("As punishment we return the models with randomly initialized weights")
+                    print("WARNING: divergence detected, please set smaller learning rate.")
+                    print("As a punishment we return a model with randomly initialized weights.")
                     self.weights_, self.bias_ = self.initialize_weights(X_train, random_state, self.classes_.shape[0])
                     return self
                 #TODO debug gradient shit
                 self.perform_backpropagation(activation_function, activation_values, z_values, y_sample, X_sample)
 
+
+            # compute train losses
+            activation_values, _ = self.feed_forward(X_train, activation_function)
+            class_probabilities = activation_values[-1]
+            current_loss = self.cross_entropy(y_train, class_probabilities).mean()
+            self.training_losses_.append(current_loss)
+
+            # compute validation losses
             activation_values, _ = self.feed_forward(X_val, activation_function)
             class_probabilities = activation_values[-1]
             current_loss = self.cross_entropy(y_val, class_probabilities).mean()
+            self.validation_losses_.append(current_loss)
 
             if current_loss < loss:
-                print(f'Loss better: {current_loss = }')
+                # print(f'Loss better: {current_loss = }')
                 early_stopping_counter = 0
             else: 
-                print(f'Loss worse: {current_loss = }')
+                # print(f'Loss worse: {current_loss = }')
                 early_stopping_counter += 1
 
             if early_stopping_counter == patience:
                 print(f'Loss did not go down for 10 iterations. Stopping training at iteration {iteration}...')
                 break
+
             current_loss = loss
+
+        self.converged_ = True
         
         return self
 
@@ -320,6 +335,16 @@ class MLP:
         output_bias = random_state.rand(num_classes, 1)
         weights.append(output_layer)
         bias.append(output_bias)
+
+        # compute number of params and save it to the model
+        number_of_params = 0
+
+        for w, b in zip(weights, bias):
+            number_of_params += w.shape[0] * w.shape[1]
+            number_of_params += b.shape[0] * b.shape[1]
+
+        self.number_of_params_ = number_of_params
+
         return weights, bias
 
 
