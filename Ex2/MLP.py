@@ -264,12 +264,12 @@ class MLP:
             current_loss = self.cross_entropy(y_val, class_probabilities).mean()
             self.validation_losses_.append(current_loss)
 
-            
+            delta = 0.005
 
             if current_loss - min_loss <= -delta:
                 min_loss = current_loss
                 early_stopping_counter = 0
-                
+
             else:
                 # print(f'Loss worse: {current_loss = }')
                 early_stopping_counter += 1
@@ -277,7 +277,6 @@ class MLP:
             if early_stopping_counter == patience:
                 print(f'Loss did not go down for {patience} iterations. Stopping training at iteration {iteration}...')
                 break
-    
         self.converged_ = True
         
         return self
