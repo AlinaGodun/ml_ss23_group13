@@ -9,6 +9,7 @@ from sklearn.metrics import accuracy_score, confusion_matrix, f1_score
 from sklearn.neural_network import MLPClassifier as skMLP
 from sklearn.model_selection import train_test_split
 from tqdm import tqdm
+from math import sqrt
 
 
 class ActivationFunction(ABC):
@@ -217,7 +218,7 @@ class MLP:
         if y is None:
             raise ValueError("MLP requires y to be passed, but the target y is None")
         X, y = check_X_y(X,y)
-
+        delta = 0.001
         self.check_regression_task(y)
         random_state = check_random_state(self.seed)
         self._is_fitted = True
@@ -240,7 +241,7 @@ class MLP:
                 X_sample = X_train[row_idx, :].reshape(1, -1)
                 y_sample = y_train[row_idx]
                 activation_values, z_values = self.feed_forward(X_sample, activation_function)
-
+                # print(activation_values)
                 #TODO probably remove again
                 if np.isnan(activation_values[-1]).any():
                     print("WARNING: divergence detected, please set smaller learning rate.")
@@ -249,7 +250,7 @@ class MLP:
                     return self
                 #TODO debug gradient shit
                 self.perform_backpropagation(activation_function, activation_values, z_values, y_sample, X_sample)
-
+                
 
             # compute train losses
             activation_values, _ = self.feed_forward(X_train, activation_function)
@@ -263,7 +264,7 @@ class MLP:
             current_loss = self.cross_entropy(y_val, class_probabilities).mean()
             self.validation_losses_.append(current_loss)
 
-            delta = current_loss*0.01
+            
 
             if current_loss - min_loss <= -delta:
                 min_loss = current_loss
@@ -276,10 +277,7 @@ class MLP:
             if early_stopping_counter == patience:
                 print(f'Loss did not go down for {patience} iterations. Stopping training at iteration {iteration}...')
                 break
-            
-
-            
-
+    
         self.converged_ = True
         
         return self
@@ -309,12 +307,25 @@ class MLP:
                 gradient = X.T @ delta
             else:
                 gradient = activation_values[layer_idx-1].T @ delta
-            print(f'{gradient = }')
+            # print(f'{gradient = }')
             self.weights_[layer_idx] -= self.learning_rate * gradient
             self.bias_[layer_idx] -= self.learning_rate * delta.T
             prev_delta = delta
 
-    
+    def xavier(self, input_dim, output_dim, layer_size, random_state):
+        lower = -(sqrt(6.0)/sqrt(input_dim+output_dim))
+        upper = -lower  
+        new_layer = random_state.rand(input_dim, layer_size)
+        new_layer = lower + new_layer * (upper - lower)
+        return new_layer
+
+    def he(self, input_dim, output_dim, layer_size, random_state):
+        std = (sqrt(2.0)/sqrt(input_dim))
+        new_layer = random_state.rand(input_dim, layer_size)
+        new_layer = new_layer * std
+        return new_layer
+
+
     def initialize_weights(self, X, random_state, num_classes):
         """Initialize the weights and biases of the neural network.
 
@@ -328,16 +339,29 @@ class MLP:
         """
         weights = []
         bias = []
+
+        if self.activation_function == 'relu':
+            weight_init_func = self.he
+        elif self.activation_function == 'sigmoid':
+            weight_init_func = self.xavier
+
         input_dim = X.shape[1]
-        for layer_size in self.hidden_layer_sizes:
-            new_layer = random_state.rand(input_dim, layer_size)
-            new_bias = random_state.rand(layer_size, 1)
+        for layer, layer_size in enumerate(self.hidden_layer_sizes):
+            if layer == len(self.hidden_layer_sizes)-1:
+                output_dim = num_classes
+            else:
+                output_dim = self.hidden_layer_sizes[layer+1]
+
+            new_layer = weight_init_func(input_dim, output_dim, layer_size, random_state)
+            new_bias = np.zeros((layer_size, 1))
+            input_dim = layer_size 
+
             weights.append(new_layer)
             bias.append(new_bias)
-            input_dim = layer_size
-        
-        output_layer = random_state.rand(input_dim, num_classes)
-        output_bias = random_state.rand(num_classes, 1)
+            
+
+        output_layer = weight_init_func(input_dim, 0, num_classes, random_state)
+        output_bias = np.zeros((num_classes, 1))
         weights.append(output_layer)
         bias.append(output_bias)
 
@@ -454,7 +478,9 @@ if __name__ == "__main__":
 
     mlp = MLP(learning_rate=0.001, n_iter=10000)
     mlp.fit(X_main, y_main)
-
+    y_pred = mlp.predict(X_test)
+    print(accuracy_score(y_test, y_pred))
+    print(confusion_matrix(y_test, y_pred))
     exit()
 
     if perform_gridsearch:
