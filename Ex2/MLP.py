@@ -231,7 +231,7 @@ class MLP:
 
         activation_function = self.afs[self.activation_function]()
 
-        loss = float('inf')
+        min_loss = float('inf')
         early_stopping_counter = 0
         
         self.weights_, self.bias_ = self.initialize_weights(X_train, random_state, self.classes_.shape[0])
@@ -263,18 +263,25 @@ class MLP:
             current_loss = self.cross_entropy(y_val, class_probabilities).mean()
             self.validation_losses_.append(current_loss)
 
-            if current_loss < loss:
+            #delta = current_loss*0.001
+
+            if current_loss < min_loss:
+                min_loss = current_loss
+                #if abs(current_loss - min_loss) <= delta:
+
                 # print(f'Loss better: {current_loss = }')
                 early_stopping_counter = 0
-            else: 
+                
+            else:
                 # print(f'Loss worse: {current_loss = }')
                 early_stopping_counter += 1
 
             if early_stopping_counter == patience:
-                print(f'Loss did not go down for 10 iterations. Stopping training at iteration {iteration}...')
+                print(f'Loss did not go down for {patience} iterations. Stopping training at iteration {iteration}...')
                 break
+            
 
-            current_loss = loss
+            
 
         self.converged_ = True
         
