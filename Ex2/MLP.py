@@ -176,13 +176,10 @@ class MLP:
         Args:
             y (array-like): The true labels.
             y_pred (array-like): The predicted probabilities.
-            weights (list): The weight matrices of the neural network.
-            bias (list): The bias vectors of the neural network.
 
         Returns:
             float: The computed cross-entropy loss.
         """
-        #TODO regularisation with weights + bias
         loss = np.zeros(y.shape)
         for idx, class_label in zip(range(y_pred.shape[1]), self.classes_):
             y_prob = y_pred[:, idx]
@@ -226,6 +223,8 @@ class MLP:
         self.validation_losses_ = []
         self.training_losses_ = []
         self.classes_, y = np.unique(y, return_inverse=True)
+
+        # Create validation split for early stopping
         X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.2, stratify=y, random_state=random_state)
 
         self.n_features_in_ = X_train.shape[1]
@@ -236,6 +235,7 @@ class MLP:
         early_stopping_counter = 0
         
         self.weights_, self.bias_ = self.initialize_weights(X_train, random_state, self.classes_.shape[0])
+        # gradient information is saved for visualization purposes
         self.gradients_ = {i: [] for i in range(len(self.weights_))}
         
         for iteration in range(self.n_iter):
@@ -244,14 +244,12 @@ class MLP:
                 X_sample = X_train[row_idx, :].reshape(1, -1)
                 y_sample = y_train[row_idx]
                 activation_values, z_values = self.feed_forward(X_sample, activation_function)
-                # print(activation_values)
-                #TODO probably remove again
+
                 if np.isnan(activation_values[-1]).any():
                     print("WARNING: divergence detected, please set smaller learning rate.")
                     print("As a punishment we return a model with randomly initialized weights.")
                     self.weights_, self.bias_ = self.initialize_weights(X_train, random_state, self.classes_.shape[0])
                     return self
-                #TODO debug gradient shit
 
                 sample_gradients = self.perform_backpropagation(activation_function, activation_values, z_values, y_sample, X_sample)
                 it_gradients = [it_gradients[i] + sample_gradients[i] for i in range(len(sample_gradients))]
@@ -277,9 +275,7 @@ class MLP:
             if current_loss - min_loss <= -delta:
                 min_loss = current_loss
                 early_stopping_counter = 0
-
             else:
-                # print(f'Loss worse: {current_loss = }')
                 early_stopping_counter += 1
 
             if early_stopping_counter == patience:
@@ -321,6 +317,18 @@ class MLP:
         return gradients
 
     def xavier(self, input_dim, output_dim, layer_size, random_state):
+        """Xavier initialization sets the initial weights of the neural network using a uniform distribution 
+        with bounds that are determined based on the number of input and output neurons.
+
+        Parameters:
+            input_dim (int): The number of input neurons.
+            output_dim (int): The number of output neurons.
+            layer_size (int): The number of neurons in the current layer.
+            random_state (object): The random state object for weight initialization.
+
+        Returns:
+            array-like: The initialized weight matrix using the Xavier method.
+        """
         lower = -(sqrt(6.0)/sqrt(input_dim+output_dim))
         upper = -lower  
         new_layer = random_state.rand(input_dim, layer_size)
@@ -328,6 +336,19 @@ class MLP:
         return new_layer
 
     def he(self, input_dim, output_dim, layer_size, random_state):
+        '''
+        He initialization sets the initial weights of the neural network using a uniform distribution 
+        with bounds that are determined based on the number of input neurons.
+
+        Parameters:
+            input_dim (int): The number of input neurons.
+            output_dim (int): The number of output neurons.
+            layer_size (int): The number of neurons in the current layer.
+            random_state (object): The random state object for weight initialization.
+
+        Returns:
+            array-like: The initialized weight matrix using the He method.
+        '''
         std = (sqrt(2.0)/sqrt(input_dim))
         new_layer = random_state.rand(input_dim, layer_size)
         new_layer = new_layer * std
@@ -348,6 +369,7 @@ class MLP:
         weights = []
         bias = []
 
+        # He initialization should be used for relu and xavier for init. should be used for sigmoid
         if self.activation_function == 'relu':
             weight_init_func = self.he
         elif self.activation_function == 'sigmoid':
@@ -414,9 +436,8 @@ class MLP:
             activation_function (object): The activation function object.
 
         Returns:
-            tuple: The activation values and z values for each layer.
+            tuple of lists: Arrays of activation values and arrays of z values for each layer.
         """
-        #TODO maybe implement dropout for regularisation?
         activation_values = []
         z_values = []
         for weights, bias in zip(self.weights_, self.bias_):
@@ -489,7 +510,6 @@ if __name__ == "__main__":
     y_pred = mlp.predict(X_test)
     print(accuracy_score(y_test, y_pred))
     print(confusion_matrix(y_test, y_pred))
-    exit()
 
     if perform_gridsearch:
         params = {"n_iter": [100, 200, 300],
