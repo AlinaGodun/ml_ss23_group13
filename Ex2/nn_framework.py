@@ -1,9 +1,13 @@
+import time
+import numpy as np
 from MLP import MLP 
 from sklearn.preprocessing import OneHotEncoder
 import pandas as pd
 import itertools
 from sklearn.model_selection import cross_val_score
 import tqdm
+from sklearn.metrics import accuracy_score, confusion_matrix, f1_score
+from sklearn.model_selection import train_test_split
 
 class NNFramework:
     def __init__(self):
@@ -113,4 +117,28 @@ class NNFramework:
         mlp.set_params(**best_params)
         mlp.fit(X, y)
         return mlp
-    
+
+
+if __name__ == '__main__':
+     
+    start = time.time()
+    X_main = np.random.random_sample((1000, 10))
+    sum_X = X_main.sum(axis=1).astype(int)
+    y_main = np.clip(sum_X - np.amin(sum_X), 0, 4)
+    X_train, X_test, y_train, y_test = train_test_split(X_main, y_main)
+
+    params = {"n_iter": [100, 200, 300],
+            "learning_rate": [0.01, 0.001, 0.0001],
+            "hidden_layer_sizes": [[15, 10], [30, 20], [50, 30, 10]],
+            "activation_function": ['relu']}
+    params = {"n_iter": [100],
+            "learning_rate": [0.001, 0.0001],
+            "hidden_layer_sizes": [[5, 10]],
+            "activation_function": ['relu', 'sigmoid']}
+    nnf = NNFramework()
+    best_model = nnf.gridSearchCV(X_train, y_train, params)
+    y_pred = best_model.predict(X_test)
+    print(accuracy_score(y_test, y_pred))
+    print(confusion_matrix(y_test, y_pred))
+
+    print(time.time()-start)

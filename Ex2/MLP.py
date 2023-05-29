@@ -374,6 +374,8 @@ class MLP:
             weight_init_func = self.he
         elif self.activation_function == 'sigmoid':
             weight_init_func = self.xavier
+        else:
+            raise NotImplementedError
 
         input_dim = X.shape[1]
         for layer, layer_size in enumerate(self.hidden_layer_sizes):
@@ -497,7 +499,7 @@ class MLP:
 
 if __name__ == "__main__":
 
-    perform_gridsearch = False
+    perform_gridsearch = True
 
     start = time.time()
     X_main = np.random.random_sample((1000, 10))
@@ -505,38 +507,11 @@ if __name__ == "__main__":
     y_main = np.clip(sum_X - np.amin(sum_X), 0, 4)
     X_train, X_test, y_train, y_test = train_test_split(X_main, y_main)
 
-    mlp = MLP(learning_rate=0.001, n_iter=10000)
+    mlp = MLP(learning_rate=0.001, n_iter=100)
     mlp.fit(X_main, y_main)
     y_pred = mlp.predict(X_test)
     print(accuracy_score(y_test, y_pred))
     print(confusion_matrix(y_test, y_pred))
-
-    if perform_gridsearch:
-        params = {"n_iter": [100, 200, 300],
-                "learning_rate": [0.01, 0.001, 0.0001],
-                "hidden_layer_sizes": [[15, 10], [30, 20], [50, 30, 10]],
-                "activation_function": ['relu']}
-        params = {"n_iter": [100],
-                "learning_rate": [0.001, 0.0001],
-                "hidden_layer_sizes": [[5, 10]],
-                "activation_function": ['relu', 'sigmoid']}
-        best_model = gridSearchCV(X_train, y_train, params)
-        y_pred = best_model.predict(X_test)
-        print(accuracy_score(y_test, y_pred))
-        print(confusion_matrix(y_test, y_pred))
-
-    else:
-        mlp = MLP((15, 10), n_iter=200, learning_rate=0.01)
-        mlp.fit(X_train, y_train)
-        y_pred = mlp.predict(X_test)
-        print(accuracy_score(y_test, y_pred))
-        print(confusion_matrix(y_test, y_pred))
-        
-        skmlp = skMLP((15, 10), solver='sgd', alpha=0.0001, max_iter=200)
-        skmlp.fit(X_train, y_train)
-        y_pred = skmlp.predict(X_test)
-        print(accuracy_score(y_test, y_pred))
-        print(confusion_matrix(y_test, y_pred))
 
     print(time.time()-start)
     
