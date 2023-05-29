@@ -102,7 +102,7 @@ class NNFramework:
         """
         param_combinations = list(self.cartesian_product_dict(**param_grid))
         max_score = -1
-        for params in tqdm(param_combinations):
+        for params in tqdm.tqdm(param_combinations):
             score = self.gridSearchIteration(params, X, y)
             if score > max_score:
                 max_score = score
