@@ -236,7 +236,10 @@ class MLP:
         early_stopping_counter = 0
         
         self.weights_, self.bias_ = self.initialize_weights(X_train, random_state, self.classes_.shape[0])
+        self.gradients = {i: [] for i in range(len(self.weights_))}
+        
         for iteration in range(self.n_iter):
+            it_gradients = [0.0] * len(self.weights_)
             for row_idx in range(X_train.shape[0]):
                 X_sample = X_train[row_idx, :].reshape(1, -1)
                 y_sample = y_train[row_idx]
@@ -249,8 +252,13 @@ class MLP:
                     self.weights_, self.bias_ = self.initialize_weights(X_train, random_state, self.classes_.shape[0])
                     return self
                 #TODO debug gradient shit
-                self.perform_backpropagation(activation_function, activation_values, z_values, y_sample, X_sample)
-                
+
+                sample_gradients = self.perform_backpropagation(activation_function, activation_values, z_values, y_sample, X_sample)
+                it_gradients = [it_gradients[i] + sample_gradients[i] for i in range(len(sample_gradients))]
+            
+            it_gradients = [it_gradient/float(X_train.shape[0]) for it_gradient in it_gradients]
+            for i, it_gradient in enumerate(it_gradients):
+                self.gradients[i].append(it_gradient)
 
             # compute train losses
             activation_values, _ = self.feed_forward(X_train, activation_function)
@@ -291,14 +299,13 @@ class MLP:
             y (int): The target label.
             X (array-like): The input sample.
         """
+        gradients = []
         for layer_idx in range(len(activation_values)-1, -1, -1):
             if layer_idx == len(activation_values)-1:
                 y_indicator = np.zeros((self.classes_.shape[0]))
                 y_indicator[y] = 1.0
                 delta = activation_values[-1] - y_indicator
             else:
-                #TODO h' shit
-                # delta = <derivative> * self.weights_ * delta
                 deriv_relu = activation_function.derivative(z_values[layer_idx])
                 delta = deriv_relu * (prev_delta @ self.weights_[layer_idx + 1].T)
 
@@ -306,10 +313,12 @@ class MLP:
                 gradient = X.T @ delta
             else:
                 gradient = activation_values[layer_idx-1].T @ delta
-            # print(f'{gradient = }')
             self.weights_[layer_idx] -= self.learning_rate * gradient
             self.bias_[layer_idx] -= self.learning_rate * delta.T
             prev_delta = delta
+
+            gradients.append(gradient.mean())
+        return gradients
 
     def xavier(self, input_dim, output_dim, layer_size, random_state):
         lower = -(sqrt(6.0)/sqrt(input_dim+output_dim))

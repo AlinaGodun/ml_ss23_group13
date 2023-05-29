@@ -1,9 +1,10 @@
-from sklearn import metrics, model_selection
+import numpy as np
+from sklearn import metrics
 from sklearn.pipeline import Pipeline
-from sklearn.exceptions import ConvergenceWarning
+from sklearn.model_selection import cross_validate
 from imblearn.over_sampling import RandomOverSampler
 from imblearn.pipeline import Pipeline as ImbPipeline
-import warnings
+
 
 def eval(y_pred, y_test):
     model = {}
@@ -34,29 +35,6 @@ def eval(y_pred, y_test):
     return model
 
 
-def perform_gridsearch(X_train, y_train, X_test, y_test, pipe, params, cv=5):
-    model = {}
-    gr_search = model_selection.GridSearchCV(pipe, param_grid=params, scoring='f1_macro', cv=cv, verbose=0)
-    gr_search.fit(X_train, y_train)
-    best_params = gr_search.best_params_
-    best_score = gr_search.best_score_
-    refit_time = gr_search.refit_time_
-
-    best_model = gr_search.best_estimator_
-    y_pred = best_model.predict(X_test)
-    print('Best params:', best_params)
-    print('Best score:', best_score)
-    print('Refit time:', refit_time)
-
-    model = eval(y_pred, y_test)
-    model['best_model'] = best_model
-    model['best_params'] = best_params
-    model['best_score'] = best_score
-    model['refit_time'] = refit_time
-
-    return model
-
-
 def define_pipelines(methods, scaler=None, oversampling=False, random_seed=1038):
     pipelines = {}
     for method in methods:
@@ -80,24 +58,43 @@ def define_pipelines(methods, scaler=None, oversampling=False, random_seed=1038)
     return pipelines
 
 
-def compare_models(pipelines, params, X_train, y_train, X_test, y_test, cv=5):
-    models_cv = {}
+def run_cv_experiments(pipelines, X, y, cv_num, scoring='f1_macro', n_jobs=10, print_output=False):
+    model_params = {}
+    model_lists = {}
+    models = {}
+
     for model_name, pipeline in pipelines.items():
-        print(model_name)
+        cv_results = cross_validate(pipeline, X, y, cv=cv_num, scoring=scoring, return_estimator=True, n_jobs=n_jobs)
 
-        # Disable MLP's convergence and runtime warnings to get a cleaner output for the hand-in;
-        # During our experiments, we also considered whether MLP training convered in the given 1000 iterations
-        # The analysis of this behaviour is mentioned in the report
-        warnings.simplefilter("ignore", category=ConvergenceWarning)
-        warnings.simplefilter("ignore", category=RuntimeWarning)
+        models[model_name] = cv_results['estimator']
+        model_params[model_name] = {}
+        model_lists[model_name] = {}
 
-        models_cv[model_name] = perform_gridsearch(X_train, y_train, X_test, y_test, pipeline, params[model_name], cv)
-        print(f"Report line: {models_cv[model_name]['acc']:.3f} " +
-                             f"{models_cv[model_name]['balanced_acc']:.3f} " +
-                             f"{models_cv[model_name]['precision']:.3f} " +
-                             f"{models_cv[model_name]['recall']:.3f} " +
-                             f"{models_cv[model_name]['f-score']:.3f} " +
-                             f"{models_cv[model_name]['refit_time']:.3f} ")
-        print('----------------------------------------------------------------------------------------------------')
-    return models_cv
+        num_cols = ['test_score', 'fit_time', 'score_time']
+
+        for num_col in num_cols:
+            model_lists[model_name][num_col] = cv_results[num_col]
+            model_params[model_name][f'{num_col}_mean'] = cv_results[num_col].mean()
+            model_params[model_name][f'{num_col}_std'] = cv_results[num_col].std()
+        
+        model_params[model_name]['parameter_num'] = cv_results['estimator'][0][model_name].number_of_params_
+        model_params[model_name]['hidden_layer_sizes'] = cv_results['estimator'][0][model_name].hidden_layer_sizes
+        model_params[model_name]['activation_function'] = cv_results['estimator'][0][model_name].activation_function
+        model_params[model_name]['learning_rate'] = cv_results['estimator'][0][model_name].learning_rate
+        model_lists[model_name]['converged'] = [e[model_name].converged_ for e in cv_results['estimator']]
+        model_lists[model_name]['validation_losses'] = [e[model_name].validation_losses_ for e in cv_results['estimator']]
+        model_lists[model_name]['training_losses'] = [e[model_name].training_losses_ for e in cv_results['estimator']]
+        model_lists[model_name]['gradients'] = [e[model_name].gradients_ for e in cv_results['estimator']]
+        model_params[model_name]['num_iter'] = np.array(list([len(e[model_name].training_losses_) for e in cv_results['estimator']])).mean()
+
+        if print_output:
+            print(model_name)
+            print(
+                f"f1 scores: {model_lists[model_name]['test_score']}\n" +
+                f"f1 mean: {model_params[model_name]['test_score_mean']:.3f}\n" +
+                f"f1 std: {model_params[model_name]['test_score_std']:.3f}\n"
+            )
+            print('----------------------------------------------------------------------------------------------------')
+    return models, model_params, model_lists
+    
     
