@@ -236,7 +236,7 @@ class MLP:
         early_stopping_counter = 0
         
         self.weights_, self.bias_ = self.initialize_weights(X_train, random_state, self.classes_.shape[0])
-        self.gradients = {i: [] for i in range(len(self.weights_))}
+        self.gradients_ = {i: [] for i in range(len(self.weights_))}
         
         for iteration in range(self.n_iter):
             it_gradients = [0.0] * len(self.weights_)
@@ -258,7 +258,7 @@ class MLP:
             
             it_gradients = [it_gradient/float(X_train.shape[0]) for it_gradient in it_gradients]
             for i, it_gradient in enumerate(it_gradients):
-                self.gradients[i].append(it_gradient)
+                self.gradients_[i].append(it_gradient)
 
             # compute train losses
             activation_values, _ = self.feed_forward(X_train, activation_function)
