@@ -3,9 +3,11 @@ use std::collections::LinkedList;
 use macroquad::color::*;
 use macroquad::window::*;
 use macroquad::shapes::*;
+use macroquad::input::*;
 use rand::Rng;
 
 
+#[derive(Debug)]
 struct Velocity{
     x: i32,
     y: i32,
@@ -17,11 +19,13 @@ struct Position{
     y: i32
 }
 
+#[derive(Debug)]
 struct Ball{
     position: Position,
     velocity: Velocity
 }
 
+#[derive(Debug)]
 struct Paddle{
     position: Position,
     velocity: Velocity
@@ -31,6 +35,12 @@ struct Paddle{
 struct Brick{
     position: Position,
     color: Color
+}
+
+enum Action{
+    MoveLeft,
+    MoveRight,
+    StandStill
 }
 
 fn initialize_ball(grid_size_x:i32, grid_size_y:i32) -> Ball{
@@ -88,6 +98,18 @@ fn reset_game(grid_size_x:i32, grid_size_y:i32, paddle_size:i32, brick_size:i32,
     (ball, paddle, bricks)
 }
 
+fn get_action() -> Action{
+    let key: Option<KeyCode> = get_last_key_pressed();
+    let keycode = match key{
+        Some(keycode) => keycode,
+        _ => return Action::StandStill
+    };
+    match keycode {
+        KeyCode::Left => Action::MoveLeft,
+        KeyCode::Right => Action::MoveRight,
+        _ => Action::StandStill
+    }
+}
 
 #[macroquad::main("Breakout")]
 async fn main() {
@@ -112,6 +134,19 @@ async fn main() {
 
     let (mut ball, mut paddle, mut bricks) = reset_game(GRID_SIZE_X, GRID_SIZE_Y, PADDLE_LEN, BRICK_LEN, BRICK_ROWS);
     loop {
+        let action = get_action();
+        paddle.velocity.x = match action{
+            Action::MoveLeft => (paddle.velocity.x-1).clamp(-2, 2),
+            Action::MoveRight => (paddle.velocity.x+1).clamp(-2, 2),
+            Action::StandStill => paddle.velocity.x
+        };
+        paddle.position.x += paddle.velocity.x;
+        if paddle.position.x <= 0 || paddle.position.x >= GRID_SIZE_X - PADDLE_LEN{
+            paddle.position.x = paddle.position.x.clamp(0, GRID_SIZE_X - PADDLE_LEN);
+            paddle.velocity.x = 0;
+        }
+        
+
         ball.position.x += ball.velocity.x;
         ball.position.y += ball.velocity.y;
 
@@ -130,11 +165,22 @@ async fn main() {
         };
 
         ball.position.x = ball.position.x.clamp(0, GRID_SIZE_X - 1);
+        
+        if ball.position.y == GRID_SIZE_Y -2 && ball.position.x >= paddle.position.x && ball.position.x < paddle.position.x + PADDLE_LEN{
+            ball.velocity.x = ball.position.x - paddle.position.x - 2;
+            ball.velocity.y = -1;
+        }
+        
+        // for brick in bricks.iter(){
+        //     if ball.position.y ==
+        // }
+
+
         clear_background(BLACK);
 
         draw_circle(
             ((2*ball.position.x+BALL_SIZE)*SCALING_FACTOR/2) as f32, 
-            ((2*ball.position.y-BALL_SIZE)*SCALING_FACTOR/2) as f32,
+            ((2*ball.position.y+BALL_SIZE)*SCALING_FACTOR/2) as f32,
             ((BALL_SIZE * SCALING_FACTOR)/2) as f32, 
             YELLOW);
 
