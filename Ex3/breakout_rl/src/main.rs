@@ -11,6 +11,7 @@ use crate::breakout_types::*;
 pub mod mc_control;
 use crate::mc_control::*;
 use std::io;
+use std::time::SystemTime;
 
 fn render_scene(ball: &Ball, paddle: &Paddle, bricks: &LinkedList<Brick>){
     clear_background(BLACK);
@@ -68,8 +69,16 @@ async fn main() {
         (GRID_SIZE_Y*SCALING_FACTOR) as f32);
 
 
+    let now = SystemTime::now();
     let policy = mc_control_loop(20000, 1000, 0.05);
-    println!("Policy found!");
+    match now.elapsed() {
+        Ok(elapsed) => {
+            println!("Policy found in {0}s!", elapsed.as_secs());
+        }
+        Err(e) => {
+            println!("Error: {e:?}");
+        }
+    }
     print!("Press enter to start visualization: ");
     io::stdout().flush().unwrap();
     let mut irrelevant_input = String::new(); 
