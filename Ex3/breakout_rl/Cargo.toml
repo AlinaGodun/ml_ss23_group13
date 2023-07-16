@@ -8,3 +8,9 @@ edition = "2021"
 [dependencies]
 macroquad = "0.4.0"
 rand = "0.8.5"
+
+#[[bin]]
+#name = "BreakoutVis"
+
+#[[bin]]
+#name = "RL_Training"

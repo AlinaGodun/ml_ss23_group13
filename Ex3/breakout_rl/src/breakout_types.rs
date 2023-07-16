@@ -55,3 +55,9 @@ pub struct StateAction{
     pub state: State,
     pub action: Action
 }
+
+pub enum GameStatus{
+    Continue,
+    ResetGame,
+    GameWon
+}
