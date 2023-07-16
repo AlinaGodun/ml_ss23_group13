@@ -9,14 +9,14 @@ use rand::{
 
 #[derive(Clone)]
 #[derive(Eq, Hash, PartialEq)]
-struct State{
+pub struct State{
     ball: Ball,
     paddle: Paddle,
     bricks: LinkedList<Brick>
 }
 
 impl State{
-    fn new(ball: &Ball, paddle: &Paddle, bricks: &LinkedList<Brick>) -> Self{
+    pub fn new(ball: &Ball, paddle: &Paddle, bricks: &LinkedList<Brick>) -> Self{
         Self{
             ball: ball.clone(),
             paddle: paddle.clone(),
@@ -51,8 +51,11 @@ impl Distribution<Action> for Standard {
     }
 }
 
-fn take_action(policy: &HashMap<State, Action>, state: &State, epsilon: f32) -> Action{
+pub fn take_action(policy: &HashMap<State, Action>, state: &State, epsilon: f32) -> Action{
     let preferred_action = policy.get(state).expect("Some value should have been inserted so this should never fail");
+    if epsilon <= 0.0 {
+        return preferred_action.clone()
+    }
 
     let mut rng = rand::thread_rng();
     let rand_val = rng.gen_range(0.0..=1.0);
@@ -99,7 +102,8 @@ fn generate_episode(policy: &mut HashMap<State, Action>, max_iter: usize, epsilo
             break;
         }
         if let GameStatus::ResetGame = game_status {
-            rewards.push_front(-100.0);
+            println!("RESET!!!!!!!!");
+            rewards.push_front(-500.0);
             (ball, paddle, bricks) = reset_game(GRID_SIZE_X, GRID_SIZE_Y, PADDLE_LEN, BRICK_LEN, BRICK_ROWS);
         } else {
             rewards.push_front(-1.0);
@@ -107,10 +111,11 @@ fn generate_episode(policy: &mut HashMap<State, Action>, max_iter: usize, epsilo
         
         i += 1;
     }
+    println!("episode {i}");
     (taken_states, taken_actions, rewards)
 }
 
-pub fn mc_control_loop(num_episodes: usize, max_iter_per_episode: usize, epsilon: f32){
+pub fn mc_control_loop(num_episodes: usize, max_iter_per_episode: usize, epsilon: f32) -> HashMap<State, Action>{
     let mut policy:HashMap<State, Action> = HashMap::new();
     let mut state_action_values:HashMap<StateAction, f32> = HashMap::new();
     let mut visited_state_counter : HashMap<StateAction, usize> = HashMap:: new();
@@ -119,15 +124,15 @@ pub fn mc_control_loop(num_episodes: usize, max_iter_per_episode: usize, epsilon
     while i < num_episodes {
         let mut g: f32 = 0.0;
         let mut state_visited_in_episode : HashMap<StateAction, bool> = HashMap:: new();
-        let epsilon = epsilon * (-(i as f32)*4.0/num_episodes as f32).exp();
+        let epsilon = epsilon * (-(i as f32)*1.0/num_episodes as f32).exp();
         println!("{epsilon}");
 
         let (states, actions, rewards) = generate_episode(&mut policy, max_iter_per_episode, epsilon);
         let state = states.front().expect("Some state should be filled");
         let brick_len = state.bricks.len();
 
-        for (state, (action, rewards)) in states.into_iter().zip(actions.into_iter().zip(rewards.into_iter())) {
-            g = 0.3*g + rewards;
+        for (state, (action, rewards)) in states.iter().zip(actions.iter().zip(rewards.iter())) {
+            g = 0.98*g + rewards;
             let state_action = StateAction::new(&state, &action);
 
             if !(state_visited_in_episode.get(&state_action).unwrap_or(&false)){
@@ -139,10 +144,11 @@ pub fn mc_control_loop(num_episodes: usize, max_iter_per_episode: usize, epsilon
                 state_visited_in_episode.insert(state_action, true);
             }
         }
-        println!("");
         i += 1;
-        println!("Episode#: {i}, BricksLeft: {brick_len}");
+        println!("Episode#: {i}, BricksLeft: {brick_len} g: {g}");
+        println!("");
     }
+    policy
 }
 
 fn update_policy(policy: &mut HashMap<State, Action>, state_action_values: &HashMap<StateAction, f32>, state: &State) -> (){
