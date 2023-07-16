@@ -1,5 +1,4 @@
 use std::collections::LinkedList;
-use macroquad::color::*;
 use rand::Rng;
 use crate::breakout_types::*;
 
@@ -76,16 +75,14 @@ impl Ball{
 
 fn initialize_bricks(grid_size_x:i32, brick_size:i32, brick_rows: i32) -> LinkedList<Brick>{
     let mut pos_y = 0;
-    let colors = [RED, ORANGE, YELLOW, GREEN, BLUE, PURPLE];
     let mut bricks: LinkedList<Brick> = LinkedList::new();
     loop {    
         let mut pos_x = 0;
         if pos_y >= brick_rows {break;}
-        let row_color = colors[pos_y as usize % colors.len()];
         loop{
             if pos_x >= grid_size_x {break;}
             let position =  Position{x: pos_x, y:pos_y};
-            let brick = Brick{position, color: row_color};
+            let brick = Brick{position};
             bricks.push_back(brick);
 
             pos_x += brick_size;
