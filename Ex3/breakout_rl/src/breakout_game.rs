@@ -34,7 +34,6 @@ impl Ball{
         let initial_position = Position{x:grid_size_x/2, y:grid_size_y-1};
         let mut rng = rand::thread_rng();
         let rand_vel_x = rng.gen_range(-2..=2);
-        println!("rand starting vel_x: {rand_vel_x}");
 
         let initial_velocity = Velocity{x:rand_vel_x, y:-1};
         Self {

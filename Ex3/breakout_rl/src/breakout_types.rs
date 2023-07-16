@@ -1,6 +1,6 @@
 pub const GRID_SIZE_X:i32 = 21; 
 pub const GRID_SIZE_Y:i32 = 21;
-pub const BRICK_ROWS: i32 = 3;
+pub const BRICK_ROWS: i32 = 1;
 pub const BALL_SIZE:i32 = 1;
 pub const PADDLE_LEN:i32 = 5;
 pub const BRICK_LEN:i32 = 3;

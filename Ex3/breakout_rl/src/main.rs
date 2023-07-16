@@ -94,6 +94,6 @@ fn main() {
     assert!(GRID_SIZE_X % 2 != 0);          // center pixel available
     assert!(SCALING_FACTOR % 2 == 0);       // guarantee positions are int 
 
-    mc_control_loop(1000, 1000, 0.05);
+    mc_control_loop(1000, 10000, 0.05);
 }
 

@@ -71,10 +71,11 @@ fn take_action(policy: &HashMap<State, Action>, state: &State, epsilon: f32) -> 
     taken_action
 }
 
-fn generate_episode(policy: &mut HashMap<State, Action>, max_iter: usize, epsilon:f32) -> (LinkedList<State>, LinkedList<Action>){
+fn generate_episode(policy: &mut HashMap<State, Action>, max_iter: usize, epsilon:f32) -> (LinkedList<State>, LinkedList<Action>, LinkedList<f32>){
     let (mut ball, mut paddle, mut bricks) = reset_game(GRID_SIZE_X, GRID_SIZE_Y, PADDLE_LEN, BRICK_LEN, BRICK_ROWS);
     let mut taken_states: LinkedList<State> = LinkedList::new();
     let mut taken_actions: LinkedList<Action> = LinkedList::new();
+    let mut rewards: LinkedList<f32> = LinkedList::new();
     // Episode: max timesteps (e.g. 1000) or game won
     let mut i = 0;
     while i < max_iter {
@@ -93,17 +94,20 @@ fn generate_episode(policy: &mut HashMap<State, Action>, max_iter: usize, epsilo
         let game_status = game_step(&mut paddle, &mut ball, &mut bricks, &taken_action);
         
         if let GameStatus::GameWon = game_status {
+            rewards.push_front(1000.0);
             println!("Game won!!!!!!!!!!");
             break;
         }
         if let GameStatus::ResetGame = game_status {
-
+            rewards.push_front(-100.0);
             (ball, paddle, bricks) = reset_game(GRID_SIZE_X, GRID_SIZE_Y, PADDLE_LEN, BRICK_LEN, BRICK_ROWS);
+        } else {
+            rewards.push_front(-1.0);
         }
         
         i += 1;
     }
-    (taken_states, taken_actions)
+    (taken_states, taken_actions, rewards)
 }
 
 pub fn mc_control_loop(num_episodes: usize, max_iter_per_episode: usize, epsilon: f32){
@@ -115,23 +119,29 @@ pub fn mc_control_loop(num_episodes: usize, max_iter_per_episode: usize, epsilon
     while i < num_episodes {
         let mut g: f32 = 0.0;
         let mut state_visited_in_episode : HashMap<StateAction, bool> = HashMap:: new();
+        let epsilon = epsilon * (-(i as f32)*4.0/num_episodes as f32).exp();
+        println!("{epsilon}");
 
-        let (states, actions) = generate_episode(&mut policy, max_iter_per_episode, epsilon);
+        let (states, actions, rewards) = generate_episode(&mut policy, max_iter_per_episode, epsilon);
+        let state = states.front().expect("Some state should be filled");
+        let brick_len = state.bricks.len();
 
-        for (state, action) in states.into_iter().zip(actions.into_iter()) {
-            g += 1.0;
+        for (state, (action, rewards)) in states.into_iter().zip(actions.into_iter().zip(rewards.into_iter())) {
+            g = 0.3*g + rewards;
             let state_action = StateAction::new(&state, &action);
 
             if !(state_visited_in_episode.get(&state_action).unwrap_or(&false)){
                 let state_visited_count = visited_state_counter.entry(state_action.clone()).or_insert(0);
+                *state_visited_count += 1;
                 let q = state_action_values.entry(state_action.clone()).or_insert(0.0);
                 *q += (g - *q)/(*state_visited_count as f32);
                 update_policy(&mut policy, &state_action_values, &state);
-                *state_visited_count += 1;
                 state_visited_in_episode.insert(state_action, true);
             }
         }
+        println!("");
         i += 1;
+        println!("Episode#: {i}, BricksLeft: {brick_len}");
     }
 }
 
