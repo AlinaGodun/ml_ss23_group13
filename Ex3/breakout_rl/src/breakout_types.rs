@@ -5,6 +5,7 @@ pub const BALL_SIZE:i32 = 1;
 pub const PADDLE_LEN:i32 = 5;
 pub const BRICK_LEN:i32 = 3;
 pub const SCALING_FACTOR:i32 = 100;
+pub const BRICKS_LAYOUT:BricksLayout = BricksLayout::PrideRectangle;
 
 #[derive(Debug)]
 #[derive(Clone)]
@@ -57,4 +58,10 @@ pub enum GameStatus{
     Continue,
     ResetGame,
     GameWon
+}
+
+pub enum BricksLayout{
+    PrideRectangle,
+    SlavicGrandmaTextil,
+    RainbowStaircase
 }
