@@ -102,16 +102,14 @@ fn generate_episode(policy: &mut HashMap<State, Action>, max_iter: usize, epsilo
             break;
         }
         if let GameStatus::ResetGame = game_status {
-            println!("RESET!!!!!!!!");
             rewards.push_front(-500.0);
             (ball, paddle, bricks) = reset_game(GRID_SIZE_X, GRID_SIZE_Y, PADDLE_LEN, BRICK_LEN, BRICK_ROWS);
         } else {
             rewards.push_front(-1.0);
         }
-        
         i += 1;
     }
-    println!("episode {i}");
+    println!("Timesteps: {i}");
     (taken_states, taken_actions, rewards)
 }
 

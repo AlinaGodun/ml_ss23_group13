@@ -44,6 +44,7 @@ fn render_scene(ball: &Ball, paddle: &Paddle, bricks: &LinkedList<Brick>){
 
 }
 
+#[allow(dead_code)]
 fn get_action() -> Action{
     let key: Option<KeyCode> = get_last_key_pressed();
     let keycode = match key{
