@@ -211,13 +211,17 @@ fn create_collision_grid(
     collision_grid
 }
 
-fn check_for_collision(ball: &mut Ball, paddle: &Paddle, collision_grid: &[Vec<CollisionObject>]) -> (Option<usize>, bool){
-    let mut reset = false;
+enum CollisionStatus{
+    ResetGame,
+    NoCollision,
+    Collision(Option<usize>),
+}
+
+fn check_for_collision(ball: &mut Ball, paddle: &Paddle, collision_grid: &[Vec<CollisionObject>]) -> CollisionStatus{
     let y_val = ball.velocity.y/ball.velocity.y.abs();
 
     if ball.position.y >= GRID_SIZE_Y-1{
-        reset = true;
-        return (Option::None, reset)
+        return CollisionStatus::ResetGame
     }
 
     // if ball.position.x <= 0{
@@ -225,23 +229,22 @@ fn check_for_collision(ball: &mut Ball, paddle: &Paddle, collision_grid: &[Vec<C
     //     return (Option::None, reset)
     // }
 
-    // println!("{ball:?}");
     // collision one to the side
     if ball.velocity.x.abs() > 0{
         let x_val = ball.velocity.x/ball.velocity.x.abs();
         match collision_grid[(ball.position.y+1) as usize][(ball.position.x+2+x_val) as usize]{
             CollisionObject::BRICK(idx) => {
                 ball.velocity.x *= -1;
-                return (Option::Some(idx), reset)
+                return CollisionStatus::Collision(Some(idx))
             },
             CollisionObject::PADDLE => {
                 ball.velocity.x *= -1;
-                return (Option::None, reset)
+                return CollisionStatus::Collision(None)
             },
             CollisionObject::NONE => {},
             _ => {
                 ball.velocity.x *= -1; 
-                return (Option::None, reset)
+                return CollisionStatus::Collision(None)
             }
         };
     }
@@ -250,22 +253,22 @@ fn check_for_collision(ball: &mut Ball, paddle: &Paddle, collision_grid: &[Vec<C
     match collision_grid[(ball.position.y+1+y_val) as usize][(ball.position.x+2) as usize]{
         CollisionObject::BRICK(idx) => {
             ball.velocity.y *= -1;
-            return (Option::Some(idx), reset)
+            return CollisionStatus::Collision(Some(idx))
         },
         CollisionObject::PADDLE => {
             ball.velocity.x = ball.position.x-paddle.position.x-2;
             ball.velocity.y *= -1;
-            return (Option::None, reset)
+            return CollisionStatus::Collision(None)
         },
         CollisionObject::NONE => {},
         _ => {
             ball.velocity.y *= -1; 
-            return (Option::None, reset)
+            return CollisionStatus::Collision(None)
         }
     };
 
 
-    if ball.velocity.x.abs() == 0 {return (Option::None, reset);}
+    if ball.velocity.x.abs() == 0 {return CollisionStatus::NoCollision;}
 
     let x_val = ball.velocity.x/ball.velocity.x.abs();
 
@@ -273,20 +276,20 @@ fn check_for_collision(ball: &mut Ball, paddle: &Paddle, collision_grid: &[Vec<C
     match collision_grid[(ball.position.y+1+y_val) as usize][(ball.position.x+2+x_val) as usize]{
         CollisionObject::BRICK(idx) => {
             ball.velocity.y *= -1;
-            return (Option::Some(idx), reset)
+            return CollisionStatus::Collision(Some(idx))
         },
         CollisionObject::PADDLE => {
             ball.velocity.x = ball.position.x-paddle.position.x-2;
             ball.velocity.y *= -1;
-            return (Option::None, reset)
+            return CollisionStatus::Collision(None)
         },
         CollisionObject::NONE => {},
         _ => {
             ball.velocity.y *= -1; 
-            return (Option::None, reset)
+            return CollisionStatus::Collision(None)
         }
     };
-    if ball.velocity.x.abs() != 2 {return (Option::None, reset);}
+    if ball.velocity.x.abs() != 2 {return CollisionStatus::NoCollision;}
 
     // if x == 2 {ball.position.x += ball.velocity.x/ball.velocity.x.abs()}
 
@@ -295,41 +298,40 @@ fn check_for_collision(ball: &mut Ball, paddle: &Paddle, collision_grid: &[Vec<C
         CollisionObject::BRICK(idx) => {
             ball.velocity.x *= -1;
             // ball.position.x += x_val;
-            return (Option::Some(idx), reset)
+            return CollisionStatus::Collision(Some(idx))
         },
         CollisionObject::PADDLE => {
             ball.velocity.x *= -1;
-            return (Option::None, reset)
+            return CollisionStatus::Collision(None)
         },
         CollisionObject::NONE => {},
         _ => {
             ball.velocity.x *= -1; 
             // ball.position.x += x_val;
-            return (Option::None, reset)
+            return CollisionStatus::Collision(None)
         }
     };
+
     // collision two to the side and above
     match collision_grid[(ball.position.y+1+y_val) as usize][(ball.position.x+2+x_val*2) as usize]{
         CollisionObject::BRICK(idx) => {
             ball.velocity.y *= -1;
             // ball.position.x += x_val;
-            return (Option::Some(idx), reset)
+            return CollisionStatus::Collision(Some(idx))
         },
         CollisionObject::PADDLE => {
             ball.velocity.x = ball.position.x-paddle.position.x-2;
             ball.velocity.y *= -1;
-            return (Option::None, reset)
+            return CollisionStatus::Collision(None)
         },
         CollisionObject::NONE => {},
         _ => {
             ball.velocity.y *= -1; 
             // ball.position.x += x_val;
-            return (Option::None, reset)
+            return CollisionStatus::Collision(None)
         }
     };
-
-
-    (Option::None, reset)
+    return CollisionStatus::NoCollision
 }
 
 fn remove_brick(bricks: &mut LinkedList<Brick>, colliding_brick_idx: usize) -> Brick {
@@ -366,7 +368,6 @@ pub fn game_step(
     paddle.update(action);
 
     ball.update();
-
     loop {
         let collision_grid = create_collision_grid(
             bricks,
@@ -376,19 +377,20 @@ pub fn game_step(
             BRICK_LEN,
             PADDLE_LEN,
         ); //todo param not const
-        let (colliding_brick_idx, reset) = check_for_collision(ball, paddle, &collision_grid);
+        let collision_status = check_for_collision(ball, paddle, &collision_grid);
         ball.velocity.x = clamp(ball.velocity.x, -2, 2);
         if ball.position.y + ball.velocity.y < 0{
             ball.velocity.y *= -1;
         }
-        if reset {
-            return GameStatus::ResetGame;
-        }
-        if let None = colliding_brick_idx {
-            break;
+        let potential_brick_idx = match collision_status {
+            CollisionStatus::ResetGame => return GameStatus::ResetGame,
+            CollisionStatus::NoCollision => break,
+            CollisionStatus::Collision(potential_idx) => potential_idx 
         };
-        // if let Some(colliding_brick_idx) = colliding_brick_idx {
-        remove_brick(bricks, colliding_brick_idx.unwrap());
+
+        if let Some(idx) = potential_brick_idx {
+            remove_brick(bricks, idx);
+        };
         // }
     }
 

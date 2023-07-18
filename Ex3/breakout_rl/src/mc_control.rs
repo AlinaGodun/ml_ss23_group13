@@ -103,7 +103,6 @@ fn generate_episode(
 
         if let GameStatus::GameWon = game_status {
             rewards.push_front(1000.0);
-            println!("Game won!!!!!!!!!!");
             break;
         }
         if let GameStatus::ResetGame = game_status {
@@ -115,7 +114,6 @@ fn generate_episode(
         }
         i += 1;
     }
-    println!("Timesteps: {i}");
     (taken_states, taken_actions, rewards)
 }
 
@@ -133,12 +131,10 @@ pub fn mc_control_loop(
         let mut g: f32 = 0.0;
         let mut state_visited_in_episode: HashMap<StateAction, bool> = HashMap::new();
         let epsilon = epsilon * (-(i as f32) * 1.0 / num_episodes as f32).exp();
-        println!("{epsilon}");
 
         let (states, actions, rewards) =
             generate_episode(&mut policy, max_iter_per_episode, epsilon);
         let state = states.front().expect("Some state should be filled");
-        let brick_len = state.bricks.len();
 
         for (state, (action, rewards)) in states.iter().zip(actions.iter().zip(rewards.iter())) {
             g = 0.98 * g + rewards;
@@ -161,8 +157,9 @@ pub fn mc_control_loop(
             }
         }
         i += 1;
-        println!("Episode#: {i}, BricksLeft: {brick_len} g: {g}");
-        println!("");
+        if i % 100 == 0 {
+            println!("Episode#: {i}");
+        }
     }
     policy
 }
