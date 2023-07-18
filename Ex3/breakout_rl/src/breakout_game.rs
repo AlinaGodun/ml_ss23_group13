@@ -2,6 +2,16 @@ use std::collections::LinkedList;
 use rand::Rng;
 use crate::breakout_types::*;
 
+
+#[derive(Clone)]
+#[derive(Debug)]
+pub enum CollisionObject{
+    BORDER,
+    PADDLE,
+    NONE,
+    BRICK(usize)
+}
+
 impl Paddle{
     fn new(grid_size_x:i32, grid_size_y:i32, paddle_size:i32) -> Self{
         let initial_position = Position{x:grid_size_x/2 - paddle_size/2, y:grid_size_y-1};
@@ -33,7 +43,8 @@ impl Ball{
     fn new(grid_size_x:i32, grid_size_y:i32) -> Self{
         let initial_position = Position{x:grid_size_x/2, y:grid_size_y-1};
         let mut rng = rand::thread_rng();
-        let rand_vel_x = rng.gen_range(-2..=2);
+        // let rand_vel_x = rng.gen_range(-2..=2);
+        let rand_vel_x = -1;
 
         let initial_velocity = Velocity{x:rand_vel_x, y:-1};
         Self {
@@ -132,21 +143,136 @@ fn initialize_bricks(grid_size_x:i32, brick_size:i32, brick_rows: i32, bricks_la
     }
 }
 
-fn check_for_brick_collision(bricks: &LinkedList<Brick>, ball: &Ball) -> Option<usize>{
-    let mut brick_remove_idx:Option<usize> = Option::None;
-    for (i, brick) in bricks.iter().enumerate(){
-        if ball.position.y == brick.position.y + 1 && ball.position.x >= brick.position.x && ball.position.x < brick.position.x + BRICK_LEN{
-            brick_remove_idx = Option::Some(i);
-            break;
-        } 
+fn print_collision_grid(collision_grid: &[Vec<CollisionObject>]) {
+    for row in collision_grid.iter() {
+        for cell in row.iter() {
+            let cell_symbol = match cell {
+                CollisionObject::NONE => " ",
+                CollisionObject::BRICK(_) => "B",
+                CollisionObject::PADDLE => "P",
+                CollisionObject::BORDER => "#",
+            };
+            print!("{}", cell_symbol);
+        }
+        println!();
     }
-    return brick_remove_idx
 }
 
-fn remove_brick(bricks: &mut LinkedList<Brick>, colliding_brick_idx: usize){
+fn create_collision_grid (
+    bricks: &LinkedList<Brick>, 
+    paddle: &Paddle, 
+    grid_size_x:i32, 
+    grid_size_y:i32, 
+    brick_length:i32, 
+    paddle_length:i32
+) -> Vec<Vec<CollisionObject>> {
+    let grid_size_x = grid_size_x as usize;
+    let grid_size_y = grid_size_y as usize;
+    let brick_length = brick_length as usize;
+    let mut collision_grid:Vec<Vec<CollisionObject>> = vec![vec![CollisionObject::BORDER; grid_size_x + 4]; grid_size_y + 2];
+
+    println!("{grid_size_x}, {grid_size_y}, {0}, {1}", collision_grid.len(), collision_grid[0].len());
+    for row in &mut collision_grid[1..grid_size_y+1] {
+        for cell in &mut row[2..grid_size_x+2].iter_mut(){
+            *cell = CollisionObject::NONE;
+        }
+    }
+    
+    for (i, brick) in bricks.iter().enumerate() {
+        let x = brick.position.x as usize;
+        let y = brick.position.y as usize;
+        for cell in &mut collision_grid[y+ 1][x + 2..x + 2 + brick_length] {
+            *cell = CollisionObject::BRICK(i);
+        }
+    }
+
+    let x: usize = paddle.position.x as usize;
+    let y = paddle.position.y as usize;
+    for cell in &mut collision_grid[y + 1][x + 2..x + 2 + paddle_length as usize] {
+        *cell = CollisionObject::PADDLE;
+    }
+    // print_collision_grid(&collision_grid);
+    // println!("{collision_grid:?}");
+    collision_grid
+}
+
+// fn check_collision_env(x: i32, y: i32, ball: &Ball, obj_id: i32) {
+    
+// }
+
+fn check_for_brick_collision(bricks: &LinkedList<Brick>, ball: &Ball) -> (Option<i32>, Option<i32>, Option<i32>){
+
+    let mut collision_env:[[Option<i32>; 3]; 5] = [[Option::None; 3];5];
+
+    let mut x: i32 ;
+    let mut y;
+    //1,2,3,4,5 array // save index 
+    for (i, brick) in bricks.iter().enumerate(){
+        for j in 0..BRICK_LEN{
+            x = brick.position.x+j - ball.position.x;
+            y = brick.position.y - ball.position.y;
+            
+            let i = i as i32;
+
+            if x == 0 && y*ball.velocity.y == 1 {
+                collision_env[1][0] = Option::Some(i);
+                collision_env[1][1] = Option::Some(x);
+                collision_env[1][2] = Option::Some(y);
+            } 
+            if ball.velocity.x.abs() > 0{
+                if x*ball.velocity.x/ball.velocity.x.abs() == 1 && y == 0 {
+                    collision_env[0][0] = Option::Some(i);
+                    collision_env[0][1] = Option::Some(x);
+                    collision_env[0][2] = Option::Some(y);
+                };
+                if x*ball.velocity.x/ball.velocity.x.abs() == 1 && y*ball.velocity.y == 1 {
+                    collision_env[2][0] = Option::Some(i);
+                    collision_env[2][1] = Option::Some(x);
+                    collision_env[2][2] = Option::Some(y);
+                };
+                if x*ball.velocity.x/ball.velocity.x.abs() == 2 && y == 0 {
+                    collision_env[3][0] = Option::Some(i);
+                    collision_env[3][1] = Option::Some(x);
+                    collision_env[3][2] = Option::Some(y);
+                };
+                if x*ball.velocity.x/ball.velocity.x.abs() == 2 && y*ball.velocity.y == 1 {
+                    collision_env[4][0] = Option::Some(i);
+                    collision_env[4][1] = Option::Some(x);
+                    collision_env[4][2] = Option::Some(y);
+                };
+            }
+
+        }
+    }
+
+    if ball.velocity.x == 0 {
+        return (collision_env[1][0], collision_env[1][1], collision_env[1][2])
+    }
+
+    if ball.velocity.x == 1 {
+        for collision in &collision_env[0..3]{
+            if let Some(_) = collision[0] {
+                return (collision[0], collision[1], collision[2])
+            }
+        }        
+    }
+
+    if ball.velocity.x == 2 {
+        for collision in collision_env{
+            if let Some(_) = collision[0] {
+                return (collision[0], collision[1], collision[2])
+            }
+        }        
+    }
+
+    return (Option::None,Option::None,Option::None)
+}
+
+fn remove_brick(bricks: &mut LinkedList<Brick>, colliding_brick_idx: usize) -> Brick{
     let mut split_list = bricks.split_off(colliding_brick_idx);
-    split_list.pop_front();
+    let brick = split_list.pop_front().expect("COLLISION BRICK DOES NOT EXIST");
     bricks.append(&mut split_list);
+    return brick
 }
 // -----> x
 // |
@@ -163,18 +289,31 @@ pub fn reset_game(grid_size_x:i32, grid_size_y:i32, paddle_size:i32, brick_size:
 
 
 pub fn game_step(paddle: &mut Paddle, ball: &mut Ball, bricks: &mut LinkedList<Brick>, action: &Action) -> GameStatus{
-        
+
     paddle.update(action);
 
     let ball_is_out_of_bounds = ball.update(&paddle);
     if ball_is_out_of_bounds {
         return GameStatus::ResetGame
     }
-    
-    if let Some(colliding_brick_idx) = check_for_brick_collision(&bricks, &ball){
-        ball.velocity.y = 1;
-        remove_brick(bricks, colliding_brick_idx);
-    }
+    println!("x_v:{: <10}, y_v:{: <10}", ball.velocity.x, ball.velocity.y);
+
+    loop {
+        create_collision_grid(bricks, paddle, GRID_SIZE_X, GRID_SIZE_Y, BRICK_LEN, PADDLE_LEN); //todo param not const
+        let (colliding_brick_idx, x, y) = check_for_brick_collision(&bricks, &ball);
+        if let None = colliding_brick_idx {println!("+"); break;};
+        let removed_brick = remove_brick(bricks, colliding_brick_idx.unwrap() as usize);
+        //let x: i32 = removed_brick.position.x-ball.position.x;
+        // let y: i32 = removed_brick.position.y-ball.position.y;
+        // let x: i32 = removed_brick.position.x-ball.position.x;
+        let x = x.unwrap();
+        let y = y.unwrap();
+        println!("x:{: <10}, y:{: <10}, x_v:{: <10}, y_v:{: <10}", x, y, ball.velocity.x, ball.velocity.y);
+
+        // if x == 2 {ball.position.x += ball.velocity.x/ball.velocity.x.abs()}
+        if y == 0 {ball.velocity.x *= -1}
+        if y != 0 {ball.velocity.y *=-1}
+    } 
 
     if bricks.len() == 0{
         return GameStatus::GameWon;
