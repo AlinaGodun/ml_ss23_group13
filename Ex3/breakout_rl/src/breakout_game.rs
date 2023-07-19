@@ -104,7 +104,7 @@ fn initialize_bricks_rainbow_staircase(
     let gap_size: i32 = 2;
 
     for pos_y in 0..brick_rows {
-        for pos_x in (pos_y..grid_size_x).step_by((brick_size + gap_size) as usize) {
+        for pos_x in (pos_y..grid_size_x - brick_size + 1).step_by((brick_size + gap_size) as usize) {
             let position = Position { x: pos_x, y: pos_y };
             let brick = Brick { position };
             bricks.push_back(brick);
@@ -124,7 +124,7 @@ fn initialize_bricks_slavic_grandmother_lace() -> LinkedList<Brick> {
     for (i, (brick_num, y_pos)) in brick_nums.iter().zip(y_positions.iter()).enumerate() {
         for j in (0..brick_num * (step as i32)).step_by(step) {
             let position: Position = Position {
-                x: (i as i32) * (step as i32),
+                x: (i as i32 ) * (step as i32) + (GRID_SIZE_X - 15)/2,
                 y: y_pos + j,
             };
             let brick: Brick = Brick { position: position };
@@ -211,6 +211,7 @@ fn create_collision_grid(
     collision_grid
 }
 
+#[derive(Debug)]
 enum CollisionStatus{
     ResetGame,
     NoCollision,
@@ -315,7 +316,7 @@ fn check_for_collision(ball: &mut Ball, paddle: &Paddle, collision_grid: &[Vec<C
     // collision two to the side and above
     match collision_grid[(ball.position.y+1+y_val) as usize][(ball.position.x+2+x_val*2) as usize]{
         CollisionObject::BRICK(idx) => {
-            ball.velocity.y *= -1;
+            ball.velocity.x *= -1;
             // ball.position.x += x_val;
             return CollisionStatus::Collision(Some(idx))
         },
@@ -326,7 +327,7 @@ fn check_for_collision(ball: &mut Ball, paddle: &Paddle, collision_grid: &[Vec<C
         },
         CollisionObject::NONE => {},
         _ => {
-            ball.velocity.y *= -1; 
+            ball.velocity.x *= -1; 
             // ball.position.x += x_val;
             return CollisionStatus::Collision(None)
         }
@@ -368,6 +369,7 @@ pub fn game_step(
     paddle.update(action);
 
     ball.update();
+    let mut i = 0;
     loop {
         let collision_grid = create_collision_grid(
             bricks,
@@ -377,7 +379,9 @@ pub fn game_step(
             BRICK_LEN,
             PADDLE_LEN,
         ); //todo param not const
+        i+=1;
         let collision_status = check_for_collision(ball, paddle, &collision_grid);
+        // println!("LOOPY MC LOOP LOOP woop woop {i} {ball:?} {collision_status:?}");
         ball.velocity.x = clamp(ball.velocity.x, -2, 2);
         if ball.position.y + ball.velocity.y < 0{
             ball.velocity.y *= -1;
