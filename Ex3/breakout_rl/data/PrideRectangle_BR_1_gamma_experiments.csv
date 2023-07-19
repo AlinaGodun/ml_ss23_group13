@@ -1,0 +1,5 @@
+bricks_layout,ball_start_x,timestamps_to_win,gamma,start_epsilon,epsilon,max_episode_num,current_episode_num,reward_system,policy_found_in_s,brick_length
+PrideRectangle_BR_1,2,96,0.9,0.05,0.018394431,40000,40000,normal,17,7
+PrideRectangle_BR_1,2,108,0.95,0.05,0.018394431,40000,40000,normal,22,7
+PrideRectangle_BR_1,2,92,0.98,0.05,0.018394431,40000,40000,normal,15,7
+PrideRectangle_BR_1,2,1000,1.0,0.05,0.018394431,40000,40000,normal,64,7

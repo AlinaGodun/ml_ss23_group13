@@ -1,0 +1,5 @@
+bricks_layout,ball_start_x,timestamps_to_win,gamma,start_epsilon,epsilon,max_episode_num,current_episode_num,reward_system,policy_found_in_s,brick_length
+RainbowStaircase,2,214,0.9,0.05,0.018394431,40000,40000,normal,75,16
+RainbowStaircase,2,184,0.95,0.05,0.018394431,40000,40000,normal,39,16
+RainbowStaircase,2,146,0.98,0.05,0.018394431,40000,40000,normal,44,16
+RainbowStaircase,2,1000,1.0,0.05,0.018394431,40000,40000,normal,130,16
