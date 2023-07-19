@@ -1,6 +1,5 @@
 use crate::breakout_game::*;
 use crate::breakout_types::*;
-use crate::experiments_types::*;
 use rand::{
     distributions::{Distribution, Standard},
     Rng,
@@ -51,9 +50,9 @@ impl Distribution<Action> for Standard {
 }
 
 pub fn take_action(policy: &HashMap<State, Action>, state: &State, epsilon: f32) -> Action {
-    let preferred_action: Action = if policy.contains_key(state) { policy.get(state).expect("This shouldn't be possible!").clone() } else { rand::random() };
-        // .expect("Some value should have been inserted so this should never fail");
-
+    let preferred_action = policy
+        .get(state)
+        .expect("Some value should have been inserted so this should never fail");
     if epsilon <= 0.0 {
         return preferred_action.clone();
     }
@@ -122,14 +121,10 @@ pub fn mc_control_loop(
     num_episodes: usize,
     max_iter_per_episode: usize,
     epsilon: f32,
-    gamma: f32,
-    bricks_layout: &String
-) -> (HashMap<State, Action>, LinkedList<Experiment>) {
+) -> HashMap<State, Action> {
     let mut policy: HashMap<State, Action> = HashMap::new();
     let mut state_action_values: HashMap<StateAction, f32> = HashMap::new();
     let mut visited_state_counter: HashMap<StateAction, usize> = HashMap::new();
-    let mut experiments: LinkedList<Experiment> = LinkedList::new();
-    let start_epsilon = epsilon.clone();
     let mut i = 0;
 
     while i < num_episodes {
@@ -142,7 +137,7 @@ pub fn mc_control_loop(
         let state = states.front().expect("Some state should be filled");
 
         for (state, (action, rewards)) in states.iter().zip(actions.iter().zip(rewards.iter())) {
-            g = gamma * g + rewards;
+            g = 0.98 * g + rewards;
             let state_action = StateAction::new(&state, &action);
 
             if !(state_visited_in_episode
@@ -164,50 +159,9 @@ pub fn mc_control_loop(
         i += 1;
         if i % 100 == 0 {
             println!("Episode#: {i}");
-
-            // if i > 1000 {
-                for ball_start_x in -2..=2 {
-            
-                    let (mut ball, mut paddle, mut bricks) =
-                        reset_game(GRID_SIZE_X, GRID_SIZE_Y, PADDLE_LEN, BRICK_LEN, BRICK_ROWS);
-                    let mut number_of_steps = 0;
-                    let bricks_len: usize = bricks.len();
-            
-                    ball.velocity.x = ball_start_x;
-            
-                    loop {
-                        let state = State::new(&ball, &paddle, &bricks);
-                        let action = take_action(&policy, &state, 0.0);
-            
-                        let game_status = game_step(&mut paddle, &mut ball, &mut bricks, &action);
-            
-                        if let GameStatus::ResetGame = game_status {
-                            (ball, paddle, bricks) =
-                                reset_game(GRID_SIZE_X, GRID_SIZE_Y, PADDLE_LEN, BRICK_LEN, BRICK_ROWS);
-                        }
-
-                        number_of_steps += 1;
-            
-                        if let GameStatus::GameWon = game_status {
-                            // println!("You win");
-                            break;
-                        }
-
-                        if number_of_steps == max_iter_per_episode {
-                            break;
-                        }
-                    }
-                    // println!("Took {number_of_steps} steps!");
-            
-                    let reward: String = String::from("normal");
-                    let current_experiment = Experiment::new(&bricks_layout, &ball_start_x, &number_of_steps, &gamma, &start_epsilon, &epsilon, &num_episodes, &i, &reward, &(-1.0 as u64), &bricks_len);
-            
-                    experiments.push_back(current_experiment);
-                }
-            // }
         }
     }
-    (policy, experiments)
+    policy
 }
 
 fn update_policy(
