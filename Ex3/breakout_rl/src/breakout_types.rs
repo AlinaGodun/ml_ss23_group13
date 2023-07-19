@@ -49,6 +49,7 @@ pub enum GameStatus {
     GameWon,
 }
 
+#[derive(Clone, Debug)]
 pub enum BricksLayout {
     PrideRectangle,
     SlavicGrandmaTextil,
