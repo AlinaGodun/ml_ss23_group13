@@ -1,6 +1,0 @@
-bricks_layout,ball_start_x,timestamps_to_win,gamma,start_epsilon,epsilon,max_episode_num,current_episode_num,reward_system,policy_found_in_s,brick_length
-SlavicGrandmaTextil,2,121,0.98,0.01,0.0036788862,40000,40000,normal,25,18
-SlavicGrandmaTextil,2,119,0.98,0.03,0.011036659,40000,40000,normal,28,18
-SlavicGrandmaTextil,2,114,0.98,0.05,0.018394431,40000,40000,normal,30,18
-SlavicGrandmaTextil,2,119,0.98,0.1,0.036788862,40000,40000,normal,35,18
-SlavicGrandmaTextil,2,102,0.98,0.3,0.11036659,40000,40000,normal,65,18
