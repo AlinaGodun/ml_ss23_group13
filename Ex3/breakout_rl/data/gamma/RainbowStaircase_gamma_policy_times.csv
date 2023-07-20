@@ -1,0 +1,13 @@
+,bricks_layout,ball_start_x,timestamps_to_win,gamma,start_epsilon,epsilon,max_episode_num,current_episode_num,reward_system,policy_found_in_s,brick_length,run
+0,RainbowStaircase,2,1000,0.9,0.05,0.018394431,40000,40000,normal,70,16,1
+1,RainbowStaircase,2,146,0.95,0.05,0.018394431,40000,40000,normal,63,16,1
+2,RainbowStaircase,2,1000,0.98,0.05,0.018394431,40000,40000,normal,87,16,1
+3,RainbowStaircase,2,1000,1.0,0.05,0.018394431,40000,40000,normal,196,16,1
+0,RainbowStaircase,2,142,0.9,0.05,0.018394431,40000,40000,normal,66,16,3
+1,RainbowStaircase,2,130,0.95,0.05,0.018394431,40000,40000,normal,67,16,3
+2,RainbowStaircase,2,214,0.98,0.05,0.018394431,40000,40000,normal,66,16,3
+3,RainbowStaircase,2,1000,1.0,0.05,0.018394431,40000,40000,normal,150,16,3
+0,RainbowStaircase,2,1000,0.9,0.05,0.018394431,40000,40000,normal,74,16,2
+1,RainbowStaircase,2,155,0.95,0.05,0.018394431,40000,40000,normal,58,16,2
+2,RainbowStaircase,2,95,0.98,0.05,0.018394431,40000,40000,normal,77,16,2
+3,RainbowStaircase,2,1000,1.0,0.05,0.018394431,40000,40000,normal,191,16,2
