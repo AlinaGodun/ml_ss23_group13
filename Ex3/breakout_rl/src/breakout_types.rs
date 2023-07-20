@@ -54,3 +54,19 @@ pub enum BricksLayout {
     SlavicGrandmaTextil,
     RainbowStaircase,
 }
+
+
+#[derive(Debug)]
+pub enum CollisionStatus{
+    ResetGame,
+    NoCollision,
+    Collision(Option<usize>),
+}
+
+#[derive(Clone, Debug)]
+pub enum CollisionObject {
+    BORDER,
+    PADDLE,
+    NONE,
+    BRICK(usize),
+}
