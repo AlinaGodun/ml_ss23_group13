@@ -26,9 +26,9 @@ impl Paddle {
     fn update(&mut self, action: &Action) {
         // update paddle velocity based on selected action, 
         self.velocity.x = match action {
-            Action::MoveLeft => (self.velocity.x - 1).clamp(-2, 2),
-            Action::MoveRight => (self.velocity.x + 1).clamp(-2, 2),
-            Action::StandStill => self.velocity.x,
+            Action::IncreaseVelocityLeft => (self.velocity.x - 1).clamp(-2, 2),
+            Action::IncreaseVelocityRight => (self.velocity.x + 1).clamp(-2, 2),
+            Action::DontChangeVelocity => self.velocity.x,
         };
 
         // update position based on current velocity

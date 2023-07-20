@@ -62,12 +62,12 @@ fn get_action() -> Action {
     let key: Option<KeyCode> = get_last_key_pressed();
     let keycode = match key {
         Some(keycode) => keycode,
-        _ => return Action::StandStill,
+        _ => return Action::DontChangeVelocity,
     };
     match keycode {
-        KeyCode::Left => Action::MoveLeft,
-        KeyCode::Right => Action::MoveRight,
-        _ => Action::StandStill,
+        KeyCode::Left => Action::IncreaseVelocityLeft,
+        KeyCode::Right => Action::IncreaseVelocityRight,
+        _ => Action::DontChangeVelocity,
     }
 }
 
